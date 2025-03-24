@@ -8,7 +8,7 @@ app.use(express.json());
 console.log("load express", express);
 
 app.get("/", (req, res) => {
-  res.send("welcome to Everforest backend API");
+  res.send("welcome toooo Everforest backend API");
 });
 
 module.exports = app;

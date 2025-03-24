@@ -1,0 +1,39 @@
+#指定 Compose 語法版本
+version: "3.8"
+
+services: #定義服務
+  postgres: #第一個服務（PostgreSQL 資料庫）
+    image: postgres:16.4-alpine3.20 #使用 Docker Hub 上的 PostgreSQL 官方 image
+    environment: #用 .env 檔提供 DB 使用者名稱、密碼、資料庫名稱
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_DATABASE}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      #把容器內的 PostgreSQL 資料夾 映射到名為 pgdata 的 volume
+      #讓資料不會因為容器刪除而消失（持久化）
+    ports: #將容器內 PostgreSQL 的 5432 port 映射到本機的 5432
+      - "5432:5432"
+    networks: #加入一個自訂網路（讓後端 app 能直接找這個 postgres）
+      - everforest_network
+
+  backend: #第二個服務（Node.js 應用）
+    build: . #表示要用你專案目錄的 Dockerfile 來 build 應用
+    env_file:
+      - .env #讓容器內部也能用 .env 檔案裡的環境變數（例如 PORT）
+    ports:
+      - "${PORT}:${PORT}" #把容器內的應用程式埠口對映到主機同樣的 PORT（來自 .env）
+    depends_on: #「backend 要等 postgres(container)有啟動啟動完再啟動」
+      - postgres
+    networks: #與 PostgreSQL 一起用同個虛擬網路 → 可以用服務名稱 postgres 來連資料庫
+      - everforest_network
+
+volumes: #資料卷（資料持久化）
+  pgdata:
+#定義一個 volume 名為 pgdata
+#Docker 會自動建立這個 volume，並與 postgres 資料夾對應起來
+
+networks:
+  everforest_network:
+#建立一個名稱叫 everforest_network 的虛擬網路
+#所有使用這個網路的容器都可以彼此溝通（用服務名稱）
