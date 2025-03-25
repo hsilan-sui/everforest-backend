@@ -1,11 +1,51 @@
+# Node.js modules & lockfiles
 node_modules
-npm-debug.log
-.env
-.git
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+package-lock.json
 
+# 環境變數與敏感設定
+.env
+.env.*
+!.env.example
+
+# Git 資訊
+.git
+.gitignore
+.gitattributes
+
+# Docker 自身設定
 Dockerfile
 Dockerfile.dev
 docker-compose.yml
+
+# 測試/覆蓋率
 coverage
 test
+*.test.js
+jest.config.js
+
+# ESLint / Prettier 暫存
 .eslintcache
+
+# 編譯結果 / 輸出目錄
+dist
+build
+
+# IDE 編輯器設定
+.vscode
+.idea
+.DS_Store
+
+# log / output
+*.log
+logs
+
+# 自動產出文件/報告
+doc/
+mochawesome-report/
+upload/
+
+# nvm 設定（如不需本機 nvm，可略過）
+.nvmrc

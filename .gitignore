@@ -1,9 +1,78 @@
-# 忽略依賴套件
+# === 基本 Node 專案 ===
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# 忽略環境變數設定檔
-# .env ==>開發使用
-.env 
+# === 開發工具 ===
+.vscode/
+.idea/
+.DS_Store
 
-# .env.deploy ==>部署使用
+# === .env 設定檔 ===
+.env
+.env.local
+.env.prod
 .env.deploy
+.env.test
+# 保留 .env.example（重要的範本）
+!.env.example
+
+# === 測試 / Coverage ===
+coverage/
+*.lcov
+.nyc_output/
+mochawesome-report/
+test_output/
+*.tsbuildinfo
+
+# === ESLint / Prettier Cache ===
+.eslintcache
+.prettiercache
+
+# === 日誌相關 ===
+logs/
+*.log
+*.pid
+*.pid.lock
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# === 构建 / 編譯 / 暫存 ===
+dist/
+build/
+.cache/
+tmp/
+temp/
+
+# === Docker 相關 ===
+Dockerfile
+Dockerfile.dev
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.debug.yml
+.dockerignore
+
+# === Git 操作相關 ===
+*.tgz
+.husky/_/
+commitlint.config.js
+eslint.config.mjs
+.prettierrc
+.prettierignore
+
+# === 其他工具（若沒用可刪）===
+bower_components/
+jspm_packages/
+.rpt2_cache/
+.rts2_cache_*/
+.fusebox/
+.serverless/
+.dynamodb/
+.tern-port/
+
+# === 文件與上傳輸出目錄（建議補上）===
+upload/
+doc/
+docs/
