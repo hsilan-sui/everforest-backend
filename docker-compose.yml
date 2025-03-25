@@ -41,6 +41,9 @@ services: #定義服務
     depends_on: #「backend 要等 postgres(container)有啟動啟動完再啟動」
       #確保 PostgreSQL 容器會比 backend 更早啟動（但不保證「DB已準備好」→ 如果你要保證，可以用 wait-for-it.sh 等技巧）
       - postgres
+    volumes:
+      - .:/app # 把專案掛進容器（才能即時看見程式碼改動）
+      - /app/node_modules # 避免 node_modules 被蓋掉
     networks: #與 PostgreSQL 一起用同個虛擬網路 → 可以用服務名稱 postgres 來連資料庫
       #表示 backend 也掛在同一個虛擬網路上，可用 postgres 來連資料庫
       - everforest_network

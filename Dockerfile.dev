@@ -11,6 +11,9 @@ COPY package*.json ./
 # 安裝 npm 套件
 RUN npm install
 
+# 安裝 hot reload 工具
+RUN npm install -g nodemon
+
 # 複製所有原始碼|把剩下的程式碼都複製進去
 COPY . .
 
@@ -18,4 +21,5 @@ COPY . .
 EXPOSE ${PORT}
 
 # 啟動應用程式 |設定預設執行指令
-CMD ["node", "bin/www.js"]
+# 用 nodemon 啟動伺服器
+CMD ["nodemon", "bin/www.js"]
