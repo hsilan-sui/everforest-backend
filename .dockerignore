@@ -2,3 +2,10 @@ node_modules
 npm-debug.log
 .env
 .git
+
+Dockerfile
+Dockerfile.dev
+docker-compose.yml
+coverage
+test
+.eslintcache

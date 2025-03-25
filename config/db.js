@@ -5,8 +5,5 @@ module.exports = {
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
   synchronize: process.env.DB_SYNCHRONIZE === "true",
-  ssl:
-    process.env.DB_ENABLE_SSL === "true"
-      ? { rejectUnauthorized: false }
-      : false, //是否啟用 SSL（部署時可以開啟）
+  ssl: process.env.DB_ENABLE_SSL === "true" ? { rejectUnauthorized: false } : false, //是否啟用 SSL（部署時可以開啟）
 };
