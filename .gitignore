@@ -2,4 +2,8 @@
 node_modules/
 
 # 忽略環境變數設定檔
-.env
+# .env ==>開發使用
+.env 
+
+# .env.deploy ==>部署使用
+.env.deploy

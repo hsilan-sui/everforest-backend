@@ -1,31 +1,48 @@
-#指定 Compose 語法版本
+# 指定docker Compose 文件語法的第 3.8 版
+#==>  Docker Compose v2 之後不需要明確寫 version
 version: "3.8"
 
+## services：定義你的服務（容器）
 services: #定義服務
+  ##  服務一(容器ㄧ)：PostgreSQL 資料庫服務
   postgres: #第一個服務（PostgreSQL 資料庫）
     image: postgres:16.4-alpine3.20 #使用 Docker Hub 上的 PostgreSQL 官方 image
+    #Docker Compose 會載入 .env 檔並解析 ${...} 變數
     environment: #用 .env 檔提供 DB 使用者名稱、密碼、資料庫名稱
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_DATABASE}
+
+      ## 建立一個名為 pgdata 的 volume
+      ##目的：持久化資料庫內容，不會因為容器刪除而消失
     volumes:
       - pgdata:/var/lib/postgresql/data
       #把容器內的 PostgreSQL 資料夾 映射到名為 pgdata 的 volume
       #讓資料不會因為容器刪除而消失（持久化）
     ports: #將容器內 PostgreSQL 的 5432 port 映射到本機的 5432
       - "5432:5432"
+
+      #容器間 透過這個虛擬網路溝通
     networks: #加入一個自訂網路（讓後端 app 能直接找這個 postgres）
       - everforest_network
 
-  backend: #第二個服務（Node.js 應用）
-    build: . #表示要用你專案目錄的 Dockerfile 來 build 應用
+  backend: #第二個服務/容器（Node.js 應用）
+    build:
+      #build: . #表示要用你專案目錄的 預設Dockerfile 來 build 應用
+      #區分：開發 與 部署
+      #開發使用 ==> Dockerfile.dev 來建構
+      context: . #表示 build 的目錄是當前專案根目錄
+      dockerfile: Dockerfile.dev #我想要開發環境使用這個Dockerfile.dev文件
+
     env_file:
       - .env #讓容器內部也能用 .env 檔案裡的環境變數（例如 PORT）
     ports:
       - "${PORT}:${PORT}" #把容器內的應用程式埠口對映到主機同樣的 PORT（來自 .env）
     depends_on: #「backend 要等 postgres(container)有啟動啟動完再啟動」
+      #確保 PostgreSQL 容器會比 backend 更早啟動（但不保證「DB已準備好」→ 如果你要保證，可以用 wait-for-it.sh 等技巧）
       - postgres
     networks: #與 PostgreSQL 一起用同個虛擬網路 → 可以用服務名稱 postgres 來連資料庫
+      #表示 backend 也掛在同一個虛擬網路上，可用 postgres 來連資料庫
       - everforest_network
 
 volumes: #資料卷（資料持久化）
@@ -36,4 +53,4 @@ volumes: #資料卷（資料持久化）
 networks:
   everforest_network:
 #建立一個名稱叫 everforest_network 的虛擬網路
-#所有使用這個網路的容器都可以彼此溝通（用服務名稱）
+#所有使用這個網路的容器都可以彼此溝通（用服務名稱/容器名稱）
