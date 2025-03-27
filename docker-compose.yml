@@ -37,7 +37,8 @@ services: #定義服務
     env_file:
       - .env #讓容器內部也能用 .env 檔案裡的環境變數（例如 PORT）
     ports:
-      - "${PORT}:${PORT}" #把容器內的應用程式埠口對映到主機同樣的 PORT（來自 .env）
+      - "3000:${PORT}"
+      #- "${PORT}:${PORT}" #把容器內的應用程式埠口對映到主機同樣的 PORT（來自 .env）
     depends_on: #「backend 要等 postgres(container)有啟動啟動完再啟動」
       #確保 PostgreSQL 容器會比 backend 更早啟動（但不保證「DB已準備好」→ 如果你要保證，可以用 wait-for-it.sh 等技巧）
       - postgres

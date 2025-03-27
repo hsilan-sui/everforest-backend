@@ -12,7 +12,7 @@ COPY package*.json ./
 RUN npm install
 
 # 安裝 hot reload 工具
-RUN npm install -g nodemon
+#RUN npm install nodemon
 
 # 複製所有原始碼|把剩下的程式碼都複製進去
 COPY . .
@@ -25,4 +25,4 @@ EXPOSE ${PORT}
 #CMD ["nodemon", "bin/www.js"]
 
 # 容器 PostgreSQL 起來之後，後端才會啟動
-CMD ["sh", "-c", "node wait-for-postgres.js && nodemon bin/www.js"]
+CMD ["sh", "-c", "node wait-for-postgres.js && npx nodemon bin/www.js"]
