@@ -11,7 +11,7 @@ app.use(express.json());
 console.log("load express", express);
 
 app.get("/", (req, res) => {
-  res.send("北十四  welcome toooo Everforest backend API");
+  res.send("北十四 good  welcome toooo Everforest backend API");
 });
 
 app.get("/healthcheck", (req, res) => {
