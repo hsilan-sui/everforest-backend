@@ -26,6 +26,12 @@ services: #定義服務
     networks: #加入一個自訂網路（讓後端 app 能直接找這個 postgres）
       - everforest_network
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
   backend: #第二個服務/容器（Node.js 應用）
     build:
       #build: . #表示要用你專案目錄的 預設Dockerfile 來 build 應用
@@ -48,6 +54,11 @@ services: #定義服務
     networks: #與 PostgreSQL 一起用同個虛擬網路 → 可以用服務名稱 postgres 來連資料庫
       #表示 backend 也掛在同一個虛擬網路上，可用 postgres 來連資料庫
       - everforest_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes: #資料卷（資料持久化）
   pgdata:

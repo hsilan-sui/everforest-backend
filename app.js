@@ -11,7 +11,11 @@ app.use(express.json());
 console.log("load express", express);
 
 app.get("/", (req, res) => {
-  res.send("北十四 h haha welcome toooo Everforest backend API");
+  res.send("北十四  welcome toooo Everforest backend API");
+});
+
+app.get("/healthcheck", (req, res) => {
+  res.status(200).send("OK 你容器裡的後端 與 容器裡的資料庫都很健康");
 });
 
 module.exports = app;
