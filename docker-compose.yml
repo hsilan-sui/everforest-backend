@@ -20,14 +20,15 @@ services: #定義服務
       #把容器內的 PostgreSQL 資料夾 映射到名為 pgdata 的 volume
       #讓資料不會因為容器刪除而消失（持久化）
     ports: #將容器內 PostgreSQL 的 5432 port 映射到本機的 5432
-      - "5432:5432"
+      #- "5432:5432"
+      - 15432:5432 # 對外開一個不同的 port
 
       #容器間 透過這個虛擬網路溝通
     networks: #加入一個自訂網路（讓後端 app 能直接找這個 postgres）
       - everforest_network
 
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+    healthcheck: #這裡是.env設定的DB_USERNAME
+      test: ["CMD-SHELL", "pg_isready -U everforest"]
       interval: 30s
       timeout: 5s
       retries: 5
