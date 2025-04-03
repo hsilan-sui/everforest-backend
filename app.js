@@ -14,6 +14,10 @@ app.get("/", (req, res) => {
   res.send("北十四 good  welcome toooo Everforest backend API");
 });
 
+app.post("/api/v1/auth/register", (req, res) => {
+  res.send("成功！");
+});
+
 app.get("/healthcheck", (req, res) => {
   res.status(200).send("OK 你容器裡的後端 與 容器裡的資料庫都很健康");
 });
