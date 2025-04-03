@@ -22,7 +22,7 @@ EXPOSE ${PORT}
 
 # 啟動應用程式 |設定預設執行指令
 # 用 nodemon 啟動伺服器
-#CMD ["nodemon", "bin/www.js"]
+# CMD ["nodemon", "bin/www.js"]
 
 # 容器 PostgreSQL 起來之後，後端才會啟動
 CMD ["sh", "-c", "node wait-for-postgres.js && npx nodemon bin/www.js"]
