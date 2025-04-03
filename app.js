@@ -66,12 +66,14 @@ app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
 
+
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/member", memberRouter);
 
 app.use("/api/v1/host", hostRouter);
 
 //*** 第 5 階段：健康檢查 ***
+
 app.get("/healthcheck", (req, res) => {
   res.status(200).send("OK 你容器裡的後端 與 容器裡的資料庫都很健康");
 });
