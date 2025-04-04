@@ -28,7 +28,7 @@ services: #定義服務
       - everforest_network
 
     healthcheck: #這裡是.env設定的DB_USERNAME
-      test: ["CMD-SHELL", "pg_isready -U everforest"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
       interval: 30s
       timeout: 5s
       retries: 5
