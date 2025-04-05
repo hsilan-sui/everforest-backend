@@ -10,6 +10,8 @@
     "docker:down": "docker compose --env-file .env down",
     "docker:clean": "docker compose --env-file .env down -v",
     "docker:logs": "docker compose logs -f --tail=100",
+    "docker:logs:backend": "docker compose logs -f backend",
+    "docker:logs:pg": "docker compose logs -f postgres",
     "init:env": "shx cp .env.example .env",
     "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --config ./jest.config.js --coverage --roots ./test/unit",
     "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testSequencer=./test/sequencer -i --config ./jest.config.js --coverage --roots ./test/integration",
