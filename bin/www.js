@@ -18,12 +18,11 @@ app.set("port", port);
 
 const server = http.createServer(app);
 
-function onError(error) {
+const onError = (error) => {
   if (error.syscall !== "listen") {
     throw error;
   }
   const bind = typeof port === "string" ? `Pipe ${port}` : `Port ${port}`;
-  // handle specific listen errors
   switch (error.code) {
     case "EACCES":
       logger.error(`${bind} requires elevated privileges`);
@@ -37,7 +36,7 @@ function onError(error) {
       logger.error(`exception on ${bind}: ${error.code}`);
       process.exit(1);
   }
-}
+};
 
 server.on("error", onError);
 server.listen(port, async () => {
@@ -50,6 +49,3 @@ server.listen(port, async () => {
     process.exit(1);
   }
 });
-// app.listen(port, () => {
-//   console.log(`Server ggggggoooood at http://localhost:${port}`);
-// });

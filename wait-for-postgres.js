@@ -7,14 +7,14 @@ const retryInterval = 1000;
 const maxAttempts = 30;
 let attempts = 0;
 
-console.log(`⏳ 等待 PostgreSQL (${host}:${port}) 啟動...`);
+console.warn(`⏳ 等待 PostgreSQL (${host}:${port}) 啟動...`);
 
 const tryConnect = () => {
   const socket = new net.Socket();
 
   socket.setTimeout(1000);
   socket.on("connect", () => {
-    console.log("PostgreSQL 已啟動，開始啟動應用程式！");
+    console.warn("PostgreSQL 已啟動，開始啟動應用程式！");
     socket.destroy();
     process.exit(0);
   });
