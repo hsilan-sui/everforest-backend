@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("北十四 good  welcome toooo Everforest backend API");
+  res.send("北十四 test test");
 });
 
 app.get("/healthcheck", (req, res) => {
