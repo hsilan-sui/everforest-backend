@@ -8,5 +8,6 @@ const errorAsync = require("../utils/errorAsync");
 const authController = require("../controller/auth");
 
 router.post("/register", errorAsync(authController.signUp));
+router.post("/login", errorAsync(authController.postMemberLogin));
 
 module.exports = router;

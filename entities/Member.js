@@ -46,6 +46,7 @@ module.exports = new EntitySchema({
     password: {
       type: "varchar",
       length: 72,
+      select: false, //預設查詢不會帶出 password
       nullable: true,
     },
     role: {
