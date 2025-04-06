@@ -15,8 +15,6 @@ services: #定義服務
 
       # 加上時區設定（讓容器用 Asia/Taipei 時區）
       - TZ=Asia/Taipei
-      # 當 PostgreSQL 初始化時，也預設用 Asia/Taipei
-      - POSTGRES_INITDB_ARGS=--timezone=Asia/Taipei
 
       ## 建立一個名為 pgdata 的 volume
       ##目的：持久化資料庫內容，不會因為容器刪除而消失

@@ -7,8 +7,8 @@ const bcrypt = require("bcrypt");
 const authController = {
   async signUp(req, res, next) {
     const { provider, firstname, lastname, email, password } = req.body;
-    console.log("Request body:", req.body);
-    console.log(isUndefined(provider));
+    console.warn("Request body:", req.body);
+    console.warn(isUndefined(provider));
 
     if (
       isUndefined(provider) ||
@@ -65,6 +65,12 @@ const authController = {
       },
     });
   },
+  // async postMemberLogin(req, res, next) {
+  //   //取出使用者請夾帶的資料 物件解構
+  //   const { email, password } = req.body;
+
+  //   //防呆
+  // },
 };
 
 module.exports = authController;
