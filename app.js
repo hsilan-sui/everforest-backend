@@ -11,10 +11,16 @@ require("dotenv").config(); //讀取環境變數 ｜取用process.env
 // }
 
 const app = express();
-app.use(cors());
+
+//*** 第 1 階段：基礎安全與跨域設定 ***
+app.use(cors()); // 處理跨域
+
+//*** 第 2 階段：解析請求內容 ***
 // 限制傳過來的 JSON 大小
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "10kb" })); // 限制 JSON 請求大小
 app.use(express.urlencoded({ extended: false }));
+
+// *** 第 3 階段：記錄請求紀錄（Log middleware） ***
 app.use(
   pinoHttp({
     logger,
@@ -28,18 +34,28 @@ app.use(
 );
 app.use(express.static(path.join(__dirname, "public")));
 
+//*** 第 4 階段：路由註冊 ***
 app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
 
 app.use("/api/v1/auth", authRouter);
 
+//*** 第 5 階段：健康檢查 ***
 app.get("/healthcheck", (req, res) => {
   res.status(200).send("OK 你容器裡的後端 與 容器裡的資料庫都很健康");
 });
 
-// 錯誤處理
-app.use((err, req, res) => {
+//***  第 6 階段：處理找不到的路由（404）***
+app.use((req, res, _next) => {
+  return res.status(404).json({
+    status: "error",
+    message: "找不到此路由",
+  });
+});
+
+//***  第 7 階段：錯誤處理 middleware（終站）***
+app.use((err, req, res, _next) => {
   req.log.error(err);
 
   if (err instanceof Error && err.statusCode) {
@@ -51,7 +67,7 @@ app.use((err, req, res) => {
 
   res.status(500).json({
     status: "error",
-    message: "伺服器錯誤",
+    message: "伺服器錯誤，請稍後再試",
   });
 });
 
