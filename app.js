@@ -5,6 +5,7 @@ const pinoHttp = require("pino-http");
 
 const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
+const memberRouter = require("./routes/memberRouter");
 require("dotenv").config(); //讀取環境變數 ｜取用process.env
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
@@ -40,6 +41,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/member", memberRouter);
 
 //*** 第 5 階段：健康檢查 ***
 app.get("/healthcheck", (req, res) => {
