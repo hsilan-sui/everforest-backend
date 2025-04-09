@@ -28,7 +28,7 @@ export default defineConfig([
     rules: {
       ...js.configs.recommended.rules,
       "prettier/prettier": ["warn", prettierOptions],
-      "func-style": ["error", "expression"],
+      "func-style": ["error", "expression"], 
       "no-var": "error",
       "no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "no-implicit-coercion": "warn",

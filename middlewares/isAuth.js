@@ -1,6 +1,6 @@
 /*
 1. 驗證是否登入  ==> isAuth
-2. RBAC（Role-Based Access Control）角色權限控制==>restrictTo([member, admin , host])
+2. RBAC（Role-Based Access Control）角色權限控制==>restrictTo([user, admin , host])
 */
 const { verifyJWT } = require("../utils/jwtUtils");
 const appError = require("../utils/appError");
@@ -22,6 +22,7 @@ const isAuth = async (req, res, next) => {
 
     //手動把 解碼後的 payload 存進 req.user
     req.user = decoded;
+    console.warn("JWT payload:", decoded);
     next();
   } catch (error) {
     next(error);

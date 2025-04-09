@@ -5,7 +5,7 @@ const router = express.Router();
 // const logger = require("../utils/logger")("Auth");
 
 const errorAsync = require("../utils/errorAsync");
-const authController = require("../controller/auth");
+const authController = require("../controllers/auth");
 
 router.post("/register", errorAsync(authController.signUp));
 router.post("/login", errorAsync(authController.postMemberLogin));
