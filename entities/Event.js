@@ -4,8 +4,8 @@ const { EntitySchema } = require("typeorm");
  * 活動資料表
  */
 module.exports = new EntitySchema({
-  name: "Events",
-  tableName: "EVENTS",
+  name: "Event",
+  tableName: "EVENT",
   columns: {
     id: {
       type: "uuid",
@@ -86,6 +86,11 @@ module.exports = new EntitySchema({
         referencedColumnName: "id",
         foreignKeyConstraintName: "events_host_id_fk",
       },
+    },
+    EventTag: {
+      target: "EventTag",
+      type: "one-to-many",
+      inverseSide: "event",
     },
   },
 });

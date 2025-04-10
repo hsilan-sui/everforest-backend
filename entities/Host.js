@@ -34,7 +34,6 @@ module.exports = new EntitySchema({
       enum: ["已認證", "未認證"],
       default: "未認證",
     },
-
     country_code: {
       type: "varchar",
       length: 8,
@@ -84,8 +83,8 @@ module.exports = new EntitySchema({
       },
       onDelete: "CASCADE",
     },
-    Events: {
-      target: "Events",
+    Event: {
+      target: "Event",
       type: "one-to-many",
       inverseSide: "Host",
     },
