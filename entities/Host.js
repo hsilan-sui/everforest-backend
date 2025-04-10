@@ -1,6 +1,6 @@
 const { EntitySchema } = require("typeorm");
 /**
- * 與會員資料表的關聯
+ * 主辦方資料表
  */
 module.exports = new EntitySchema({
   name: "Host",
@@ -71,7 +71,7 @@ module.exports = new EntitySchema({
 
       joinColumn: {
         name: "member_id", //// 這會讓 member_id 自動作為 FK 欄位
-        referenceColumnName: "id",
+        referencedColumnName: "id",
         //如果沒有指定 foreignKeyConstraintName，TypeORM 會自動產生隨機名稱，未來就難以管理
         foreignKeyConstraintName: "host_member_id_fk",
         //SQL 層級的設定，用來設定「這條外鍵的約束名稱 (constraint name)
@@ -83,6 +83,11 @@ module.exports = new EntitySchema({
         // 這條約束的名稱是 "coach_user_id_fk"
       },
       onDelete: "CASCADE",
+    },
+    Events: {
+      target: "Events",
+      type: "one-to-many",
+      inverseSide: "Host",
     },
   },
 });

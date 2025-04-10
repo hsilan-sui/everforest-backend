@@ -105,4 +105,11 @@ module.exports = new EntitySchema({
       default: () => "CURRENT_TIMESTAMP",
     },
   },
+  relations: {
+    Host: {
+      target: "Host",
+      type: "one-to-one",
+      inverseSide: "Member", // Host 實體裡對應的關聯名稱是 Member
+    },
+  },
 });
