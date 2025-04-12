@@ -5,6 +5,7 @@ const pinoHttp = require("pino-http");
 
 const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
+const cookieParser = require("cookie-parser");
 require("dotenv").config(); //讀取環境變數 ｜取用process.env
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
@@ -21,6 +22,8 @@ const corsOptions = {
 
   credentials: true, //允許帶上cookie
 };
+
+app.use(cookieParser()); //允許讀取cookie
 
 //*** 第 1 階段：基礎安全與跨域設定 ***
 app.use(cors(corsOptions)); // 處理跨域 //允許前端請求帶上cookie
