@@ -2,19 +2,19 @@ const { dataSource } = require("../db/data-source");
 // const logger = require('../utils/logger')('adminController')
 const { isUndefined, isNotValidString, isValidPassword } = require("../utils/validUtils");
 const appError = require("../utils/appError");
-const logger = require("../utils/logger")("Member");
+const logger = require("../utils/logger")("Auth");
 const bcrypt = require("bcrypt");
 const { generateJWT } = require("../utils/jwtUtils");
 
 const authController = {
   async signUp(req, res, next) {
-    const { provider, firstname, lastname, email, password } = req.body;
+    const { provider, username, firstname, lastname, email, password, role } = req.body;
     console.warn("Request body:", req.body);
     console.warn(isUndefined(provider));
 
     if (
-      isUndefined(provider) ||
-      isNotValidString(provider) ||
+      isUndefined(username) ||
+      isNotValidString(username) ||
       isUndefined(firstname) ||
       isNotValidString(firstname) ||
       isUndefined(lastname) ||
@@ -31,7 +31,7 @@ const authController = {
       return next(appError(400, "密碼不符合規則，需要包含英文數字大小寫，最短8個字，最長16個字"));
     }
 
-    const memberRepo = dataSource.getRepository("Member");
+    const memberRepo = dataSource.getRepository("MemberInfo");
     const existMember = await memberRepo.findOne({
       where: {
         email,
@@ -47,13 +47,14 @@ const authController = {
     const hashPassword = await bcrypt.hash(password, salt);
 
     // 新增會員
-    const newMember = await memberRepo.create({
+    const newMember = memberRepo.create({
       provider,
+      username,
       firstname,
       lastname,
       email,
       password: hashPassword,
-      role: "member",
+      role,
     });
 
     const result = await memberRepo.save(newMember);
@@ -62,7 +63,12 @@ const authController = {
       data: {
         member: {
           id: result.id,
+          provider: result.provider,
           email: result.email,
+          username: result.username,
+          firstname: result.firstname,
+          lastname: result.lastname,
+          role: result.role,
         },
       },
     });
