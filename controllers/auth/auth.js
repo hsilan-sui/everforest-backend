@@ -1,10 +1,10 @@
-const { dataSource } = require("../db/data-source");
+const { dataSource } = require("../../db/data-source");
 // const logger = require('../utils/logger')('adminController')
-const { isUndefined, isNotValidString, isValidPassword } = require("../utils/validUtils");
-const appError = require("../utils/appError");
-const logger = require("../utils/logger")("Auth");
+const { isUndefined, isNotValidString, isValidPassword } = require("../../utils/validUtils");
+const appError = require("../../utils/appError");
+const logger = require("../../utils/logger")("Auth");
 const bcrypt = require("bcrypt");
-const { generateJWT } = require("../utils/jwtUtils");
+const { generateJWT } = require("../../utils/jwtUtils");
 
 const authController = {
   async signUp(req, res, next) {
@@ -60,6 +60,7 @@ const authController = {
     const result = await memberRepo.save(newMember);
     res.status(201).json({
       status: "success",
+      message: "註冊成功",
       data: {
         member: {
           id: result.id,
@@ -74,11 +75,14 @@ const authController = {
     });
   },
   async postMemberLogin(req, res, next) {
+    console.warn("res物件方法", res);
     //取出使用者請夾帶的資料 物件解構
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
     console.warn("Request body:", req.body);
     //基本驗證
     if (
+      isUndefined(username) ||
+      isNotValidString(username) ||
       isUndefined(email) ||
       isNotValidString(email) ||
       isUndefined(password) ||

@@ -12,8 +12,18 @@ require("dotenv").config(); //讀取環境變數 ｜取用process.env
 
 const app = express();
 
+//=> 這裡再進階處理cookie 允許前端請求帶入cookie (裡面夾帶token)
+const corsOptions = {
+  origin:
+    process.env.NODE_ENV !== "production"
+      ? process.env.FRONTEND_DEV_ORIGIN
+      : process.env.FRONTEND_PRO_ORIGIN,
+
+  credentials: true, //允許帶上cookie
+};
+
 //*** 第 1 階段：基礎安全與跨域設定 ***
-app.use(cors()); // 處理跨域
+app.use(cors(corsOptions)); // 處理跨域 //允許前端請求帶上cookie
 
 //*** 第 2 階段：解析請求內容 ***
 // 限制傳過來的 JSON 大小
