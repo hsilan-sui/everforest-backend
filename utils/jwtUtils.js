@@ -3,14 +3,21 @@ const config = require("../config/index");
 const appError = require("./appError");
 // const app = require("../app");
 
-//產生jwt
-const generateJWT = (payload) => {
+//產生jwt token ==> Access Token(短效通行證) 15分鐘
+const generateAccessJWT = (payload) => {
   return jwt.sign(payload, config.get("secret.jwtSecret"), {
-    expiresIn: config.get("secret.jwtExpiresDay"),
+    expiresIn: config.get("secret.jwtExpiresDay"), //15m短效通行證
   });
 };
 
-//驗證jwt
+//產生jwt token ==> Refresh Token(長效通行證)
+const generateRefreshJWT = (payload) => {
+  return jwt.sign(payload, config.get("secret.jwtSecret"), {
+    expiresIn: config.get("secret.jwtRefreshExpires"), //7天
+  });
+};
+
+//驗證token （通用）
 const verifyJWT = (token) => {
   return new Promise((resolve, reject) => {
     jwt.verify(token, config.get("secret.jwtSecret"), (err, decoded) => {
@@ -29,6 +36,7 @@ const verifyJWT = (token) => {
 };
 
 module.exports = {
-  generateJWT,
+  generateAccessJWT,
+  generateRefreshJWT,
   verifyJWT,
 };

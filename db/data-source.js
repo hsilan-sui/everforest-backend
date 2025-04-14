@@ -12,7 +12,7 @@ const dataSource = new DataSource({
   poolSize: 10,
   ssl: config.get("db.ssl"),
 
-  entities: [__dirname + "/../entities/*.js"],
+  entities: [__dirname + "/../entities/**/*.js"],
   // 關鍵db容器先=>node容器 重試設定（TypeORM 內建）
   retryAttempts: 10, // 最多重試 10 次
   retryDelay: 2000, // 每次失敗間隔 2000ms（2秒）

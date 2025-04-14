@@ -1,8 +1,8 @@
 const { EntitySchema } = require("typeorm");
 
 module.exports = new EntitySchema({
-  name: "Member",
-  tableName: "MEMBER",
+  name: "MemberInfo",
+  tableName: "MEMBER_INFO",
   columns: {
     id: {
       type: "uuid",
@@ -12,47 +12,63 @@ module.exports = new EntitySchema({
     },
     email: {
       type: "varchar",
-      length: 32,
+      length: 256,
       nullable: false,
       unique: true,
     },
     firstname: {
       type: "varchar",
-      length: 50,
+      length: 16,
       nullable: false,
     },
     lastname: {
       type: "varchar",
-      length: 50,
+      length: 16,
       nullable: false,
+    },
+    username: {
+      type: "varchar",
+      length: 16,
+      nullable: false,
+    },
+    password: {
+      type: "varchar",
+      length: 256,
+      select: false, //預設查詢不會帶出 password
+      nullable: true, //搭配provider判斷是否為第三方登入
     },
     phone: {
       type: "varchar",
-      length: 15,
+      length: 72,
       nullable: true,
       unique: true,
-    },
-    country_code: {
-      type: "varchar",
-      length: 8,
-      nullable: true,
-      default: "+886",
     },
     provider: {
       type: "varchar",
       length: 20,
-      default: "local",
-    },
-    password: {
-      type: "varchar",
-      length: 72,
-      select: false, //預設查詢不會帶出 password
-      nullable: true,
+      default: "local", //預設本地登入
     },
     role: {
       type: "varchar",
       length: 20,
-      default: "member",
+      default: "member", //預設都是會員
+    },
+    photo_url: {
+      type: "varchar",
+      length: 1024,
+      nullable: true, //預設是可以null
+    },
+    created_at: {
+      type: "timestamptz",
+      default: () => "CURRENT_TIMESTAMP",
+    },
+    updated_at: {
+      type: "timestamptz",
+      default: () => "CURRENT_TIMESTAMP",
+    },
+    birth: {
+      type: "date",
+      nullable: true,
     },
     is_verified: {
       type: "boolean",
@@ -62,24 +78,10 @@ module.exports = new EntitySchema({
       type: "timestamptz",
       nullable: true,
     },
-    mobile_number: {
-      type: "varchar",
-      length: 15,
-      nullable: true,
-    },
     google_sub: {
       type: "varchar",
       length: 64,
       unique: true,
-      nullable: true,
-    },
-    birth: {
-      type: "date",
-      nullable: true,
-    },
-    nickname: {
-      type: "varchar",
-      length: 48,
       nullable: true,
     },
     gender: {
@@ -89,20 +91,12 @@ module.exports = new EntitySchema({
     },
     email_verify_token: {
       type: "varchar",
-      length: 128,
+      length: 1024,
       nullable: true,
     },
     email_token_expired_at: {
       type: "timestamptz",
       nullable: true,
-    },
-    created_at: {
-      type: "timestamptz",
-      default: () => "CURRENT_TIMESTAMP",
-    },
-    updated_at: {
-      type: "timestamptz",
-      default: () => "CURRENT_TIMESTAMP",
     },
   },
 });
