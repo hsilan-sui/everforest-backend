@@ -7,12 +7,14 @@ const pinoHttp = require("pino-http");
 const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
 const cookieParser = require("cookie-parser");
-
+const setupSwagger = require("./swagger");
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
 
 const app = express();
+//  router 註冊之前
+setupSwagger(app);
 
 //=> 這裡再進階處理cookie 允許前端請求帶入cookie (裡面夾帶token)
 const corsOptions = {
