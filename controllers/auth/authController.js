@@ -8,9 +8,8 @@ const { generateAccessJWT, generateRefreshJWT, verifyJWT } = require("../../util
 
 const authController = {
   async signUp(req, res, next) {
-    const { provider, username, firstname, lastname, email, password, role } = req.body;
+    const { username, firstname, lastname, email, phone, password } = req.body;
     console.warn("Request body:", req.body);
-    console.warn(isUndefined(provider));
 
     if (
       isUndefined(username) ||
@@ -21,6 +20,8 @@ const authController = {
       isNotValidString(lastname) ||
       isUndefined(email) ||
       isNotValidString(email) ||
+      isNotValidString(phone) ||
+      isUndefined(phone) ||
       isUndefined(password) ||
       isNotValidString(password)
     ) {
@@ -33,13 +34,15 @@ const authController = {
 
     const memberRepo = dataSource.getRepository("MemberInfo");
     const existMember = await memberRepo.findOne({
-      where: {
-        email,
-      },
+      where: [{ email }, { username }],
     });
 
     if (existMember) {
-      return next(appError(409, "Email已被使用"));
+      if (existMember.email === email) {
+        return next(appError(409, "Email 已被使用"));
+      } else if (existMember.username === username) {
+        return next(appError(409, "username 已被使用"));
+      }
     }
     // 密碼加密
     const saltRounds = process.env.SALT_ROUNDS || 10;
@@ -48,30 +51,22 @@ const authController = {
 
     // 新增會員
     const newMember = memberRepo.create({
-      provider,
       username,
       firstname,
       lastname,
+      phone,
       email,
       password: hashPassword,
-      role,
     });
 
     const result = await memberRepo.save(newMember);
+
+    if (!result || !result.id) {
+      return next(appError(500, "註冊失敗，請稍後再試"));
+    }
     res.status(201).json({
       status: "success",
       message: "註冊成功",
-      data: {
-        member: {
-          id: result.id,
-          provider: result.provider,
-          email: result.email,
-          username: result.username,
-          firstname: result.firstname,
-          lastname: result.lastname,
-          role: result.role,
-        },
-      },
     });
   },
   async postMemberLogin(req, res, next) {
