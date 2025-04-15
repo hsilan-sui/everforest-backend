@@ -59,7 +59,7 @@ services: #定義服務
       #表示 backend 也掛在同一個虛擬網路上，可用 postgres 來連資料庫
       - everforest_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/healthcheck"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/healthcheck"]
       interval: 30s
       timeout: 10s
       retries: 3
