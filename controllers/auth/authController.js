@@ -71,12 +71,10 @@ const authController = {
   },
   async postMemberLogin(req, res, next) {
     //取出使用者請夾帶的資料 物件解構
-    const { provider, email, username, password } = req.body;
+    const { email, password } = req.body;
     console.warn("Request body:", req.body);
     //基本驗證
     if (
-      isUndefined(username) ||
-      isNotValidString(username) ||
       isUndefined(email) ||
       isNotValidString(email) ||
       isUndefined(password) ||
@@ -92,7 +90,7 @@ const authController = {
     //去資料庫找該使用者資訊
     const findMember = await memberRepo.findOne({
       // findOne() 搭配 select: [...] 時，它只會回傳你「明確指定的欄位」
-      select: ["id", "provider", "username", "firstname", "lastname", "role", "password"],
+      select: ["id", "username", "firstname", "lastname", "email", "role", "password"],
       where: { email },
     });
     //test
@@ -161,7 +159,6 @@ const authController = {
       data: {
         member: {
           id: findMember.id,
-          provider,
           username: findMember.username,
           firstname: findMember.firstname,
           lastname: findMember.lastname,
