@@ -1,3 +1,4 @@
+require("dotenv").config(); //讀取環境變數 ｜取用process.env
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -6,12 +7,14 @@ const pinoHttp = require("pino-http");
 const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
 const cookieParser = require("cookie-parser");
-require("dotenv").config(); //讀取環境變數 ｜取用process.env
+const setupSwagger = require("./swagger");
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
 
 const app = express();
+//  router 註冊之前
+setupSwagger(app);
 
 //=> 這裡再進階處理cookie 允許前端請求帶入cookie (裡面夾帶token)
 const corsOptions = {
@@ -69,19 +72,27 @@ app.use((req, res, _next) => {
 
 //***  第 7 階段：錯誤處理 middleware（終站）***
 app.use((err, req, res, _next) => {
-  req.log.error(err);
+  console.error("全域錯誤處理器:", err);
 
-  if (err instanceof Error && err.statusCode) {
-    return res.status(err.statusCode).json({
-      status: "failed",
-      message: err.message,
-    });
-  }
-
-  res.status(500).json({
+  res.status(err.statusCode || 500).json({
     status: "error",
-    message: "伺服器錯誤，請稍後再試",
+    message: err.message || "伺服器錯誤，請稍後再試",
   });
 });
+// app.use((err, req, res, _next) => {
+//   req.log.error(err);
+
+//   if (err instanceof Error && err.statusCode) {
+//     return res.status(err.statusCode).json({
+//       status: "failed",
+//       message: err.message,
+//     });
+//   }
+
+//   res.status(500).json({
+//     status: "error",
+//     message: "伺服器錯誤，請稍後再試",
+//   });
+// });
 
 module.exports = app;

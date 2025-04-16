@@ -24,9 +24,11 @@ const verifyJWT = (token) => {
       if (err) {
         switch (err.name) {
           case "TokenExpiredError":
-            return reject(appError(401, "Token 已過期"));
+            return reject(appError(401, "TOKEN_EXPIRED"));
+          case "JsonWebTokenError":
+            return reject(appError(401, "INVALID_TOKEN"));
           default:
-            return reject(appError(401, "無效的Token"));
+            return reject(appError(401, "AUTH_ERROR"));
         }
       } else {
         resolve(decoded);
