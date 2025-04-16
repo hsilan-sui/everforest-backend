@@ -1,6 +1,7 @@
 const { verifyJWT } = require("../utils/jwtUtils");
 const appError = require("../utils/appError");
 
+//驗證是否登入（從 cookie 中讀取 access_token）
 const checkAuth = async (req, res, next) => {
   //檢查前端請求挾帶的cookie中的短效token
   const token = req.cookies.access_token;
