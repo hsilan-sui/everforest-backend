@@ -58,11 +58,11 @@ module.exports = new EntitySchema({
   ],
   relations: {
     /*
-    relations 裡的 key（例如authProviders）
+    relations 裡的 key（例如memberBox）
     是你在 JavaScript / TypeORM 中存取關聯時用的「變數名稱」，
     ！！！不是資料表名稱、不是 Entity 名稱、也不是資料庫欄位名稱！！！
     這層的key是關聯的變數名稱，小寫命名慣例 & 作為 inverseSide 用*/
-    memberInfo: {
+    memberBox: {
       type: "many-to-one",
       target: "MemberInfo",
       joinColumn: {
