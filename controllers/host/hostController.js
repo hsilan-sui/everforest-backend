@@ -5,6 +5,61 @@ const appError = require("../../utils/appError");
 const logger = require("../../utils/logger")("Host");
 
 const hostController = {
+  /**
+   * [GET] /api/v1/host/profile
+   * 取得目前登入會員的主辦方資料
+   */
+  async getHostProfile(req, res, next) {
+    const memberId = req.user.id; // 從 JWT middleware 解析出會員 ID
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    try {
+      const hostRepo = dataSource.getRepository("HostInfo");
+
+      // 查詢主辦方資料，並帶出對應會員資料（memberBox 內含 role）
+      const host = await hostRepo.findOne({
+        where: { member_info_id: memberId },
+        relations: {
+          memberBox: true, // 關聯查詢 MemberInfo → 用來取得 role
+        },
+      });
+
+      if (!host) {
+        return next(appError(404, "尚未建立主辦方資料"));
+      }
+
+      return res.status(200).json({
+        status: "success",
+        message: "取得主辦方資料成功",
+        data: {
+          host_info: {
+            id: host.id,
+            member_id: host.member_info_id,
+            role: host.memberBox.role, // 取出會員角色
+            name: host.name,
+            description: host.description,
+            verification_status: host.verification_status,
+            phone: host.phone,
+            email: host.email,
+            photo_url: host.photo_url,
+            photo_background_url: host.photo_background_url,
+            created_at: host.created_at,
+            updated_at: host.updated_at,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error("取得主辦方資料錯誤", error);
+      return next(appError(500, "伺服器錯誤，無法取得主辦方資料"));
+    }
+  },
+  /**
+   * [POST] /api/v1/host/profile
+   * 建立主辦方資料，同時更新會員角色為 host，並重新簽發 JWT
+   */
   async postHostProfile(req, res, next) {
     const memberId = req.user.id; //從middleware取出目前登入的會員uuid
     if (!memberId) {
