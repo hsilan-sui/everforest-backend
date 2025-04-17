@@ -90,7 +90,14 @@ const hostController = {
       status: "success",
       message: "主辦方資料建立成功",
       data: {
-        host_info: savedHost, //帶入全部的資料 只是測試 在優化
+        host_info: {
+          name: savedHost.name,
+          description: savedHost.description,
+          email: savedHost.email,
+          phone: savedHost.phone,
+          photo_url: savedHost.photo_url,
+          photo_background_url: savedHost.photo_background_url ?? null,
+        },
       },
     });
   },
