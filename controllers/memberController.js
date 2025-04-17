@@ -1,7 +1,7 @@
-const { dataSource } = require("../../db/data-source");
-const appError = require("../../utils/appError");
-const logger = require("../../utils/logger")("member");
-const { isNotValidString, isValidURL, isValidDate } = require("../../utils/validUtils");
+const { dataSource } = require("../db/data-source");
+const appError = require("../utils/appError");
+const logger = require("../utils/logger")("member");
+const { isNotValidString, isValidURL, isValidDate } = require("../utils/validUtils");
 
 const memberController = {
   async getProfile(req, res, next) {
@@ -72,7 +72,7 @@ const memberController = {
 
     return res.status(200).json({
       status: "success",
-      message: "會員取得成功",
+      message: "會員資料更新成功",
       data: {
         member: {
           id: existMember.id,

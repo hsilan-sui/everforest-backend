@@ -1,8 +1,8 @@
-const { dataSource } = require("../../db/data-source");
-const { generateAccessJWT } = require("../../utils/jwtUtils.js");
-const { isUndefined, isNotValidString } = require("../../utils/validUtils");
-const appError = require("../../utils/appError");
-const logger = require("../../utils/logger")("Host");
+const { dataSource } = require("../db/data-source");
+const { generateAccessJWT } = require("../utils/jwtUtils.js");
+const { isUndefined, isNotValidString } = require("../utils/validUtils");
+const appError = require("../utils/appError");
+const logger = require("../utils/logger")("Host");
 const { Not } = require("typeorm");
 
 const hostController = {

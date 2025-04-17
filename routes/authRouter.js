@@ -3,7 +3,7 @@ const router = express.Router();
 //引入checkAuth middlewares
 const checkAuth = require("../middlewares/checkAuth");
 const errorAsync = require("../utils/errorAsync");
-const authController = require("../controllers/auth/authController");
+const authController = require("../controllers/authController");
 
 /**
  * @swagger

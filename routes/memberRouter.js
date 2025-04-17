@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const checkAuth = require("../middlewares/checkAuth");
 const errorAsync = require("../utils/errorAsync");
-const memberController = require("../controllers/member/memberController");
+const memberController = require("../controllers/memberController");
 
 /**
  * @swagger
