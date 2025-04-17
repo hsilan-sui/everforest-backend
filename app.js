@@ -6,7 +6,11 @@ const pinoHttp = require("pino-http");
 
 const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
+
+const memberRouter = require("./routes/memberRouter");
+
 const hostRouter = require("./routes/hostRouter");
+
 const cookieParser = require("cookie-parser");
 const setupSwagger = require("./swagger");
 // if (process.env.NODE_ENV !== "production") {
@@ -57,6 +61,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/member", memberRouter);
 
 app.use("/api/v1/host", hostRouter);
 

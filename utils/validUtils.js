@@ -21,10 +21,22 @@ const isValidPassword = (value) => {
   return passwordPattern.test(value);
 };
 
+const isValidURL = (value) => {
+  const urlPattern = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)(\/[\w- ;,./?%&=]*)?$/;
+  return urlPattern.test(value);
+};
+
+const isValidDate = (value) => {
+  const date = new Date(value);
+  return !isNaN(date.getTime());
+};
+
 module.exports = {
   isUndefined,
   isNotValidString,
   isNotValidUUID,
   isNotValidInteger,
   isValidPassword,
+  isValidURL,
+  isValidDate,
 };
