@@ -16,6 +16,16 @@ const options = {
         description: "本地開發環境",
       },
     ],
+    components: {
+      securitySchemes: {
+        JWT: {
+          type: "apiKey",
+          in: "cookie", // 如果你是從 cookie 傳 access_token
+          name: "access_token",
+          description: "JWT Token (access_token) 將從 cookie 傳入",
+        },
+      },
+    },
   },
   apis: ["./routes/*.js"], // 會讀取標註的註解
 };
