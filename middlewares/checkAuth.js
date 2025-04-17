@@ -12,6 +12,11 @@ const checkAuth = async (req, res, next) => {
 
   try {
     const decoded = await verifyJWT(token);
+
+    if (!decoded.id || !decoded.role) {
+      return next(appError(401, "登入資訊不完整，請重新登入"));
+    }
+
     req.user = decoded;
     console.warn("req.user", req.user);
     next();
