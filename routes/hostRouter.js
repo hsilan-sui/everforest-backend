@@ -17,4 +17,11 @@ router.post(
 
 //取得主辦方資料
 router.get("/profile", checkAuth, restrictTo("host"), errorAsync(hostController.getHostProfile));
+
+router.patch(
+  "/profile",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(hostController.patchHostProfile)
+);
 module.exports = router;

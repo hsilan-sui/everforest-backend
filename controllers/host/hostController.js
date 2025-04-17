@@ -3,6 +3,7 @@ const { generateAccessJWT } = require("../../utils/jwtUtils.js");
 const { isUndefined, isNotValidString } = require("../../utils/validUtils");
 const appError = require("../../utils/appError");
 const logger = require("../../utils/logger")("Host");
+const { Not } = require("typeorm");
 
 const hostController = {
   /**
@@ -179,6 +180,88 @@ const hostController = {
       return next(error);
     } finally {
       await queryRunner.release();
+    }
+  },
+
+  async patchHostProfile(req, res, next) {
+    const memberId = req.user.id;
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    const hostRepo = dataSource.getRepository("HostInfo");
+
+    try {
+      const existHost = await hostRepo.findOneBy({ member_info_id: memberId });
+
+      if (!existHost) {
+        return next(appError(404, "尚未建立主辦方資料"));
+      }
+
+      const { email, phone } = req.body;
+
+      // 檢查 email 是否重複（排除自己的那筆）
+      if (email && isNotValidString(email) === false && email !== existHost.email) {
+        const emailExists = await hostRepo.findOne({
+          where: { email },
+          // 排除自己這筆資料
+          // eslint-disable-next-line no-dupe-keys
+          where: { email, member_info_id: Not(memberId) },
+        });
+        if (emailExists) {
+          return next(appError(400, "此 Email 已被其他主辦方使用"));
+        }
+      }
+
+      // 檢查 phone 是否重複（排除自己）
+      if (phone && isNotValidString(phone) === false && phone !== existHost.phone) {
+        const phoneExists = await hostRepo.findOne({
+          where: { phone, member_info_id: Not(memberId) },
+        });
+        if (phoneExists) {
+          return next(appError(400, "此電話已被其他主辦方使用"));
+        }
+      }
+
+      // 更新欄位（僅限允許的）
+      const allowedFields = [
+        "name",
+        "description",
+        "email",
+        "phone",
+        "photo_url",
+        "photo_background_url",
+      ];
+
+      allowedFields.forEach((field) => {
+        if (field in req.body && isNotValidString(req.body[field]) === false) {
+          existHost[field] = req.body[field];
+        }
+      });
+
+      const updatedHost = await hostRepo.save(existHost);
+
+      return res.status(200).json({
+        status: "success",
+        message: "主辦方資料更新成功",
+        data: {
+          host_info: {
+            id: updatedHost.id,
+            member_id: updatedHost.member_info_id,
+            name: updatedHost.name,
+            description: updatedHost.description,
+            email: updatedHost.email,
+            phone: updatedHost.phone,
+            photo_url: updatedHost.photo_url,
+            photo_background_url: updatedHost.photo_background_url,
+            verification_status: updatedHost.verification_status,
+            updated_at: updatedHost.updated_at,
+          },
+        },
+      });
+    } catch (err) {
+      logger.error("主辦方資料更新錯誤", err);
+      return next(appError(500, "伺服器錯誤，無法更新主辦方資料"));
     }
   },
 };
