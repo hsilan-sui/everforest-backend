@@ -9,7 +9,7 @@ const memberController = require("../controllers/memberController");
  * /member/profile:
  *   get:
  *     summary: 取得會員資料
- *     tags: [Member]
+ *     tags: [Member 會員中心]
  *     description: 返回已登錄用戶的詳細資料。需要 JWT token 作為認證。
  *     security:
  *       - JWT: []
@@ -77,7 +77,7 @@ router.get("/profile", checkAuth, errorAsync(memberController.getProfile));
  * /member/profile:
  *   patch:
  *     summary: 更新會員資料
- *     tags: [Member]
+ *     tags: [Member 會員中心]
  *     description: 更新當前已登錄用戶的個人資料。需要有效的 JWT token 作為認證。
  *     security:
  *       - JWT: []

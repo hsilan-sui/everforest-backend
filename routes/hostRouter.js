@@ -13,7 +13,7 @@ const hostController = require("../controllers/hostController");
  * /host/profile:
  *   post:
  *     summary: 創建主辦方資料
- *     tags: [Host]
+ *     tags: [Host 主辦方控制台]
  *     security:
  *       - cookieAuth: []
  *     description: |
@@ -158,7 +158,7 @@ router.post("/profile", checkAuth, errorAsync(hostController.postHostProfile));
  * /host/profile:
  *   get:
  *     summary: 取得主辦方資料
- *     tags: [Host]
+ *     tags: [Host 主辦方控制台]
  *     security:
  *       - cookieAuth: []
  *     description: |
@@ -273,7 +273,7 @@ router.get("/profile", checkAuth, restrictTo("host"), errorAsync(hostController.
  * /host/profile:
  *   patch:
  *     summary: 更新主辦方資料
- *     tags: [Host]
+ *     tags: [Host 主辦方控制台]
  *     security:
  *       - cookieAuth: []
  *     description: |
