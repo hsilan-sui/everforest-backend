@@ -3,14 +3,14 @@ const router = express.Router();
 //引入checkAuth middlewares
 const checkAuth = require("../middlewares/checkAuth");
 const errorAsync = require("../utils/errorAsync");
-const authController = require("../controllers/auth/authController");
+const authController = require("../controllers/authController");
 
 /**
  * @swagger
  * /auth/register:
  *   post:
  *     summary: 會員註冊
- *     tags: [Auth]
+ *     tags: [Auth 會員認證]
  *     description: 透過網站註冊會員帳號
  *     requestBody:
  *       required: true
@@ -114,7 +114,7 @@ router.post("/register", errorAsync(authController.signUp));
  * /auth/login:
  *   post:
  *     summary: 會員登入
- *     tags: [Auth]
+ *     tags: [Auth 會員認證]
  *     description: |
  *       會員登入成功後，伺服器會回傳會員資訊，並透過 `Set-Cookie` 寫入兩個 Token 至瀏覽器：
  *
@@ -229,7 +229,7 @@ router.post("/login", errorAsync(authController.postMemberLogin));
  * /auth/check:
  *   get:
  *     summary: 檢查登入狀態
- *     tags: [Auth]
+ *     tags: [Auth 會員認證]
  *     description: 驗證會員登入狀態，驗證 access_token 是否有效，並回傳目前登入的會員資料。需附帶 HttpOnly cookie。
  *     responses:
  *       200:
@@ -277,7 +277,7 @@ router.get("/check", checkAuth, errorAsync(authController.checkMemberIsLogin));
  * /auth/refresh:
  *   post:
  *     summary: 刷新 Access Token
- *     tags: [Auth]
+ *     tags: [Auth 會員認證]
  *     description: 使用 refresh_token（HttpOnly cookie）取得新的 access_token，並自動寫入 cookie。成功會回傳會員資料。
  *     responses:
  *       200:
@@ -325,7 +325,7 @@ router.post("/refresh", errorAsync(authController.refreshMemberToken));
  * /auth/logout:
  *   post:
  *     summary: 會員登出
- *     tags: [Auth]
+ *     tags: [Auth 會員認證]
  *     description: 清除 access_token 與 refresh_token 的 cookie，結束登入狀態。
  *     responses:
  *       200:

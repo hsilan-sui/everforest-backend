@@ -1,10 +1,10 @@
-const { dataSource } = require("../../db/data-source");
+const { dataSource } = require("../db/data-source");
 // const logger = require('../utils/logger')('adminController')
-const { isUndefined, isNotValidString, isValidPassword } = require("../../utils/validUtils");
-const appError = require("../../utils/appError");
-const logger = require("../../utils/logger")("Auth");
+const { isUndefined, isNotValidString, isValidPassword } = require("../utils/validUtils");
+const appError = require("../utils/appError");
+const logger = require("../utils/logger")("Auth");
 const bcrypt = require("bcrypt");
-const { generateAccessJWT, generateRefreshJWT, verifyJWT } = require("../../utils/jwtUtils");
+const { generateAccessJWT, generateRefreshJWT, verifyJWT } = require("../utils/jwtUtils");
 
 const authController = {
   async signUp(req, res, next) {
