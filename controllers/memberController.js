@@ -2,6 +2,8 @@ const { dataSource } = require("../db/data-source");
 const appError = require("../utils/appError");
 const logger = require("../utils/logger")("member");
 const { isNotValidString, isValidURL, isValidDate } = require("../utils/validUtils");
+const formidable = require("formidable");
+const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 
 const memberController = {
   async getProfile(req, res, next) {
@@ -87,6 +89,43 @@ const memberController = {
           photo_url: existMember.photo_url,
           is_verified: existMember.is_verified,
         },
+      },
+    });
+  },
+
+  async editMemberAvatar(req, res, next) {
+    // 處理前端的檔案上傳請求
+    const form = formidable.formidable({
+      multiple: false,
+    });
+
+    // 解析來自前端的請求
+    const [, files] = await form.parse(req);
+
+    // 檢查是否有上傳檔案
+    const imageFile = files.file?.[0];
+    if (!imageFile) {
+      return next(appError(400, "請上傳圖片"));
+    }
+
+    if (!ALLOWED_FILE_TYPES[imageFile.mimetype]) {
+      return next(appError(400, "圖片格式錯誤，僅支援 JPG、PNG 格式"));
+    }
+
+    // 上傳圖片並獲取圖片 URL
+    const imageUrl = await uploadImageFile(imageFile, "member-avatar");
+
+    const memberRepo = dataSource.getRepository("MemberInfo");
+    const updateMember = await memberRepo.update({ id: req.user.id }, { photo_url: imageUrl });
+
+    if (updateMember.affected === 0) {
+      return next(appError(404, "會員資料不存在"));
+    }
+    return res.status(200).json({
+      status: "success",
+      message: "會員頭貼更新成功",
+      data: {
+        avatar_url: imageUrl,
       },
     });
   },

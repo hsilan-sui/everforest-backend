@@ -11,8 +11,14 @@ const memberController = require("../controllers/memberController");
  *     summary: 取得會員資料
  *     tags: [Member 會員中心]
  *     description: 返回已登錄用戶的詳細資料。需要 JWT token 作為認證。
+ *     description: |
+ *       取得目前登入會員的詳細資料，包含關聯的會員角色資訊。
+ *
+ *       📌 僅限已登入且身份為 `member` 的會員存取。
+ *
+ *       ⚠️ 請確保請求附帶身份驗證 Cookie（access_token）。
  *     security:
- *       - JWT: []
+ *       - cookieAuth: []
  *     responses:
  *       200:
  *         description: 會員取得成功
@@ -78,9 +84,14 @@ router.get("/profile", checkAuth, errorAsync(memberController.getProfile));
  *   patch:
  *     summary: 更新會員資料
  *     tags: [Member 會員中心]
- *     description: 更新當前已登錄用戶的個人資料。需要有效的 JWT token 作為認證。
+ *     description: |
+ *       修改目前登入會員的詳細資料，包含關聯的會員角色資訊。
+ *
+ *       📌 僅限已登入且身份為 `member` 的會員存取。
+ *
+ *       ⚠️ 請確保請求附帶身份驗證 Cookie（access_token）。
  *     security:
- *       - JWT: []
+ *       - cookieAuth: []
  *     requestBody:
  *       description: 更新會員資料
  *       content:
@@ -147,5 +158,83 @@ router.get("/profile", checkAuth, errorAsync(memberController.getProfile));
  *         description: 伺服器錯誤
  */
 router.patch("/profile", checkAuth, errorAsync(memberController.updateProfile));
+
+/**
+ * @swagger
+ * /member/profile/avatar:
+ *   post:
+ *     summary: 上傳會員頭像
+ *     tags: [Member 會員中心]
+ *     description: |
+ *       上傳並更新會員頭像，圖片限制大小為 2MB。
+ *
+ *       📌 僅限已登入且身份為 `member` 的會員存取。
+ *
+ *       ⚠️ 請確保請求附帶身份驗證 Cookie（access_token）。
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: 上傳的頭像圖片
+ *     responses:
+ *       200:
+ *         description: 會員頭貼更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 會員頭貼更新成功
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     photo_url:
+ *                       type: string
+ *                       example: https://example.com/avatar.jpg
+ *       400:
+ *         description: 未上傳圖片或圖片格式錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 請上傳圖片
+ *       404:
+ *         description: 查無會員資料
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 會員資料不存在
+ *       401:
+ *         description: 未授權，缺少或無效的 JWT
+ *       500:
+ *         description: 伺服器錯誤
+ */
+router.post("/profile/avatar", checkAuth, errorAsync(memberController.editMemberAvatar));
 
 module.exports = router;
