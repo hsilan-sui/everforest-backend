@@ -95,5 +95,10 @@ module.exports = new EntitySchema({
       inverseSide: "eventBox",
       onDelete: "CASCADE",
     },
+    eventPhotoBox: {
+      type: "one-to-many",
+      target: "EventInfoPhoto",
+      inverseSide: "eventBox",
+    },
   },
 });
