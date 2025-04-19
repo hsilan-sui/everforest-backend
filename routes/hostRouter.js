@@ -422,4 +422,211 @@ router.patch(
   restrictTo("host"),
   errorAsync(hostController.patchHostProfile)
 );
+
+/**
+ * @swagger
+ * /host/profile/avatar:
+ *   post:
+ *     summary: 上傳主辦方頭像
+ *     tags: [Host 主辦方控制台]
+ *     security:
+ *       - cookieAuth: []
+ *     description: |
+ *       已登入且為主辦方的會員可上傳一張新的頭像圖片。
+
+ *       ⚠️ 僅支援 JPEG、JPG、PNG 格式，檔案大小限制為 2MB。
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: 上傳的圖片檔案
+ *     responses:
+ *       200:
+ *         description: 主辦方頭像上傳成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 主辦方頭像已成功上傳
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     photo_url:
+ *                       type: string
+ *                       example: https://storage.googleapis.com/your-bucket/host/avatars/uuid12345.jpg
+ *       400:
+ *         description: 資料驗證錯誤（如檔案太大或格式錯誤）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 檔案太大，請選擇小於 2 MB 的圖片
+ *       401:
+ *         description: 未登入或身分錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 請先登入會員
+ *       404:
+ *         description: 尚未建立主辦方資料
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 尚未建立主辦方資料
+ *       500:
+ *         description: 伺服器錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤，無法上傳主辦方頭像
+ */
+router.post(
+  "/profile/avatar",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(hostController.editHostAvatar)
+);
+
+/**
+ * @swagger
+ * /host/profile/cover:
+ *   post:
+ *     summary: 上傳主辦方封面照
+ *     tags: [Host 主辦方控制台]
+ *     security:
+ *       - cookieAuth: []
+ *     description: |
+ *       已登入且為主辦方的會員可上傳主辦方封面照。
+
+ *       ⚠️ 僅支援 JPEG、JPG、PNG 格式，檔案大小限制為 2MB。
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: 上傳的圖片檔案
+ *     responses:
+ *       200:
+ *         description: 主辦方封面照上傳成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 主辦方封面照已成功上傳
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     photo_url:
+ *                       type: string
+ *                       example: https://storage.googleapis.com/your-bucket/host/avatars/uuid12345.jpg
+ *       400:
+ *         description: 資料驗證錯誤（如檔案太大或格式錯誤）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 檔案太大，請選擇小於 4 MB 的圖片
+ *       401:
+ *         description: 未登入或身分錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 請先登入會員
+ *       404:
+ *         description: 尚未建立主辦方資料
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 尚未建立主辦方資料
+ *       500:
+ *         description: 伺服器錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤，無法上傳主辦方封面照
+ */
+router.post(
+  "/profile/cover",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(hostController.editHostCover)
+);
+
 module.exports = router;
