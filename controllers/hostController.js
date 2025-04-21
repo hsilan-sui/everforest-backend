@@ -4,6 +4,8 @@ const { isUndefined, isNotValidString } = require("../utils/validUtils");
 const appError = require("../utils/appError");
 const logger = require("../utils/logger")("Host");
 const { Not } = require("typeorm");
+const formidable = require("formidable");
+const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 
 const hostController = {
   /**
@@ -263,6 +265,88 @@ const hostController = {
       logger.error("主辦方資料更新錯誤", err);
       return next(appError(500, "伺服器錯誤，無法更新主辦方資料"));
     }
+  },
+
+  async editHostAvatar(req, res, next) {
+    // 處理前端的檔案上傳請求
+    const form = formidable.formidable({
+      multiple: false,
+    });
+
+    // 解析來自前端的請求
+    const [, files] = await form.parse(req);
+
+    // 檢查是否有上傳檔案
+    const imageFile = files.file?.[0];
+    if (!imageFile) {
+      return next(appError(400, "請上傳圖片"));
+    }
+
+    if (!ALLOWED_FILE_TYPES[imageFile.mimetype]) {
+      return next(appError(400, "圖片格式錯誤，僅支援 JPG、PNG 格式"));
+    }
+
+    // 上傳圖片並獲取圖片 URL
+    const imageUrl = await uploadImageFile(imageFile, "host-avatar");
+
+    const hostRepo = dataSource.getRepository("HostInfo");
+    const updateHost = await hostRepo.update(
+      { member_info_id: req.user.id },
+      { photo_url: imageUrl }
+    );
+
+    if (updateHost.affected === 0) {
+      return next(appError(404, "主辦方資料不存在"));
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "主辦方頭貼更新成功",
+      data: {
+        avatar_url: imageUrl,
+      },
+    });
+  },
+
+  async editHostCover(req, res, next) {
+    // 處理前端的檔案上傳請求
+    const form = formidable.formidable({
+      multiple: false,
+    });
+
+    // 解析來自前端的請求
+    const [, files] = await form.parse(req);
+
+    // 檢查是否有上傳檔案
+    const imageFile = files.file?.[0];
+    if (!imageFile) {
+      return next(appError(400, "請上傳圖片"));
+    }
+
+    if (!ALLOWED_FILE_TYPES[imageFile.mimetype]) {
+      return next(appError(400, "圖片格式錯誤，僅支援 JPG、PNG 格式"));
+    }
+
+    // 上傳圖片並獲取圖片 URL
+    const imageUrl = await uploadImageFile(imageFile, "host-cover");
+
+    const hostRepo = dataSource.getRepository("HostInfo");
+    const updateHost = await hostRepo.update(
+      { member_info_id: req.user.id },
+      { photo_background_url: imageUrl }
+    );
+
+    if (updateHost.affected === 0) {
+      return next(appError(404, "主辦方資料不存在"));
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "主辦方封面照更新成功",
+      data: {
+        cover_url: imageUrl,
+      },
+    });
   },
 };
 
