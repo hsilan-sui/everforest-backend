@@ -13,12 +13,13 @@
     "docker:logs:backend": "docker compose logs -f backend",
     "docker:logs:pg": "docker compose logs -f postgres",
     "init:env": "shx cp .env.example .env",
-    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --config ./jest.config.js --coverage --roots ./test/unit",
-    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testSequencer=./test/sequencer -i --config ./jest.config.js --coverage --roots ./test/integration",
+    "test:unit": "jest --config=jest.config.js --coverage --roots ./test/unit",
+    "test:integration": "jest --config=jest.config.js --coverage --roots ./test/integration --testSequencer=./test/sequencer",
     "init:schema": "typeorm schema:sync -d ./db/data-source.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -52,6 +53,7 @@
     "eslint-plugin-prettier": "^5.2.4",
     "globals": "^16.0.0",
     "husky": "^9.1.7",
+    "jest": "^29.7.0",
     "lint-staged": "^15.5.0",
     "prettier": "^3.5.3",
     "shx": "^0.4.0"
