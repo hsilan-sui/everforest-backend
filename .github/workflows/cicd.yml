@@ -29,28 +29,25 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
-  # ==> 等本地測試檔也寫好，只要取消註解 以下區塊即可
-  # test:
-  #   name: Run Tests
-  #   runs-on: ubuntu-latest
-  #   needs: lint #可以避免語法錯誤的程式碼進入測試流程，節省 CI 時間與資源
-  #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
 
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 20.18.0
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint # Ensure linting passes before running tests
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  #     - name: Install Dependencies
-  #       run: npm ci
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.0
 
-  #     - name: Run Unit Tests
-  #       run: npm run test:unit
+      - name: Install Dependencies
+        run: npm ci
 
-  #     - name: Run Integration Tests
-  #       run: npm run test:integration
+      - name: Run Unit Tests
+        run: npm run test:unit
 
   # 部署區塊 可以在ci.yml 成功通過 自動觸發部署cd.yml檔
   #好處是 ci失敗 擋住 => 可以讓部署 停留在上一次成功的版本不受影響
