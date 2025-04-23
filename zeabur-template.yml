@@ -1,0 +1,39 @@
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: everforest-backend
+spec:
+  description: Everforest 專案的後端服務，使用 Node.js 和 PostgreSQL
+  services:
+    - name: backend
+      build:
+        context: .
+      run:
+        command: ["sh", "-c", "node wait-for-postgres.js && npx nodemon bin/www.js"]
+      ports:
+        - target: 3000
+      env:
+        - key: PORT
+          default: "3000"
+        - key: DB_USERNAME
+        - key: DB_PASSWORD
+        - key: DB_DATABASE
+      dependsOn:
+        - postgres
+
+    - name: postgres
+      image: postgres:16.4-alpine3.20
+      env:
+        - key: POSTGRES_USER
+          ref: DB_USERNAME
+        - key: POSTGRES_PASSWORD
+          ref: DB_PASSWORD
+        - key: POSTGRES_DB
+          ref: DB_DATABASE
+        - key: TZ
+          default: Asia/Taipei
+      ports:
+        - target: 5432
+      mounts:
+        - type: volume
+          target: /var/lib/postgresql/data
