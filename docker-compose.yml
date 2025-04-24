@@ -13,6 +13,11 @@ services: #定義服務
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_DATABASE}
 
+      # 加上時區設定（讓容器用 Asia/Taipei 時區）
+      - TZ=Asia/Taipei
+      # 當 PostgreSQL 初始化時，也預設用 Asia/Taipei
+      - POSTGRES_INITDB_ARGS=--timezone=Asia/Taipei
+
       ## 建立一個名為 pgdata 的 volume
       ##目的：持久化資料庫內容，不會因為容器刪除而消失
     volumes:
@@ -28,7 +33,7 @@ services: #定義服務
       - everforest_network
 
     healthcheck: #這裡是.env設定的DB_USERNAME
-      test: ["CMD-SHELL", "pg_isready -U everforest"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
       interval: 30s
       timeout: 5s
       retries: 5
