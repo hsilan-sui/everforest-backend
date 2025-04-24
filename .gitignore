@@ -47,7 +47,6 @@ tmp/
 temp/
 
 # === Docker 相關 ===
-Dockerfile
 Dockerfile.dev
 docker-compose.yml
 docker-compose.override.yml

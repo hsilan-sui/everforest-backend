@@ -11,12 +11,14 @@ if (process.env.NODE_ENV !== "production") {
 
 const db = require("./db");
 const web = require("./web");
+const secret = require("./secret");
 // if (result.error) {
 //   throw result.error;
 // }
 const config = {
   db,
   web,
+  secret,
 };
 
 class ConfigManager {
