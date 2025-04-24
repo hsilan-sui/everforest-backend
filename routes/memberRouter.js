@@ -10,7 +10,6 @@ const memberController = require("../controllers/memberController");
  *   get:
  *     summary: 取得會員資料
  *     tags: [Member 會員中心]
- *     description: 返回已登錄用戶的詳細資料。需要 JWT token 作為認證。
  *     description: |
  *       取得目前登入會員的詳細資料，包含關聯的會員角色資訊。
  *
