@@ -17,6 +17,7 @@ const setupSwagger = require("./swagger");
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
 
+
 if (process.env.NODE_ENV !== "production") {
   dotenv.config({
     path: path.resolve(process.cwd(), ".env"),
@@ -73,7 +74,6 @@ app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/host", hostRouter);
 
 //*** 第 5 階段：健康檢查 ***
-
 app.get("/healthcheck", (req, res) => {
   res.status(200).send("OK 你容器裡的後端 與 容器裡的資料庫都很健康");
 });
