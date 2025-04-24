@@ -80,5 +80,10 @@ module.exports = new EntitySchema({
       nullable: false,
       inverseSide: "hostBox", // 對應 MemberInfo中定義的關聯變數名（重要！）
     },
+    eventBox: {
+      type: "one-to-many",
+      target: "EventInfo",
+      inverseSide: "hostBox",
+    },
   },
 });
