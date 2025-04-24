@@ -17,11 +17,11 @@ const setupSwagger = require("./swagger");
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
 
-const envFile = process.env.NODE_ENV === "production" ? ".env.deploy" : ".env";
-
-dotenv.config({
-  path: path.resolve(process.cwd(), envFile),
-});
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config({
+    path: path.resolve(process.cwd(), ".env"),
+  });
+}
 
 const app = express();
 //  router 註冊之前
