@@ -1,4 +1,4 @@
-require("dotenv").config(); //讀取環境變數 ｜取用process.env
+const dotenv = require("dotenv");
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -16,6 +16,12 @@ const setupSwagger = require("./swagger");
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
+
+const envFile = process.env.NODE_ENV === "production" ? ".env.deploy" : ".env";
+
+dotenv.config({
+  path: path.resolve(process.cwd(), envFile),
+});
 
 const app = express();
 //  router 註冊之前
