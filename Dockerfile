@@ -1,0 +1,28 @@
+##開發用的 (部署時再來寫部署的版本)
+# 使用指定 Node.js 版本（確保一致性）
+FROM node:20.11.1
+
+# 設定容器內的工作目錄 /app
+WORKDIR /app
+
+# 複製 package 檔案並安裝依賴(提高快取命中率)
+COPY package*.json ./
+
+# 安裝 npm 套件
+RUN npm install
+
+# 安裝 hot reload 工具
+#RUN npm install nodemon
+
+# 複製所有原始碼|把剩下的程式碼都複製進去
+COPY . .
+
+# 開放埠口 | 開放 3000 port（可選）
+EXPOSE ${PORT}
+
+# 啟動應用程式 |設定預設執行指令
+# 用 nodemon 啟動伺服器
+# CMD ["nodemon", "bin/www.js"]
+
+# 容器 PostgreSQL 起來之後，後端才會啟動
+CMD ["sh", "-c", "node wait-for-postgres.js && node bin/www.js"]
