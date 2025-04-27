@@ -1,35 +1,26 @@
 const { EntitySchema } = require("typeorm");
 
 module.exports = new EntitySchema({
-  name: "EventNotice",
-  tableName: "EVENT_NOTICE",
+  name: "EventPlanAddon",
+  tableName: "EVENT_PLAN_ADDON",
   columns: {
-    //     Table EVENT_NOTICE {
-    //   id uuid [primary key, not null]
-    //   event_info_id uuid [not null, ref: > EVENT_INFO.id, note: '關聯活動表單']
-    //   type varchar(20) [default: '行前提醒', note: "提醒類型(比較彈性): 行前提醒 寵物須知 ex..交通資訊?"]
-    //   content text [not null, note: '行前提醒內容']
-    // }
     id: {
       type: "uuid",
       primary: true,
       nullable: false,
       generated: "uuid",
     },
-    event_info_id: {
+    event_plan_id: {
       type: "uuid",
       nullable: false,
-      // foreignKey: true,
-      // reference: "EVENT_INFO.id",
     },
-    type: {
+    name: {
       type: "varchar",
-      length: 20,
-      default: "行前提醒",
+      length: 100,
       nullable: false,
     },
-    content: {
-      type: "text",
+    price: {
+      type: "integer",
       nullable: false,
     },
     created_at: {
@@ -45,13 +36,13 @@ module.exports = new EntitySchema({
     },
   },
   relations: {
-    eventBox: {
+    eventPlanBox: {
       type: "many-to-one",
-      target: "EventInfo",
+      target: "EventPlan",
       joinColumn: {
-        name: "event_info_id",
+        name: "event_plan_id",
       },
-      inverseSide: "eventNoticeBox",
+      inverseSide: "eventPlanAddonBox",
       onDelete: "CASCADE",
     },
   },
