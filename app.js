@@ -8,8 +8,8 @@ const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
 
 const memberRouter = require("./routes/memberRouter");
-
 const hostRouter = require("./routes/hostRouter");
+const eventsRouter = require("./routes/eventsRouter");
 
 const cookieParser = require("cookie-parser");
 const setupSwagger = require("./swagger");
@@ -66,10 +66,17 @@ app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
 
+// /api/v1/auth (登入註冊)
 app.use("/api/v1/auth", authRouter);
+
+// /api/v1/member (會員)
 app.use("/api/v1/member", memberRouter);
 
+// /api/v1/host (主辦方)
 app.use("/api/v1/host", hostRouter);
+
+// /api/v1/events (露營活動事件 |複數命名(資源集合)| 路由也對應api)
+app.use("/api/v1/events", eventsRouter);
 
 //*** 第 5 階段：健康檢查 ***
 app.get("/healthcheck", (req, res) => {
