@@ -10,6 +10,7 @@ const authRouter = require("./routes/authRouter");
 const memberRouter = require("./routes/memberRouter");
 const hostRouter = require("./routes/hostRouter");
 const eventsRouter = require("./routes/eventsRouter");
+const metaRouter = require("./routes/metaRouter");
 
 const cookieParser = require("cookie-parser");
 const setupSwagger = require("./swagger");
@@ -77,6 +78,9 @@ app.use("/api/v1/host", hostRouter);
 
 // /api/v1/events (露營活動事件 |複數命名(資源集合)| 路由也對應api)
 app.use("/api/v1/events", eventsRouter);
+
+// /api/v1/meta (==>跟 EventTag（活動標籤主表）路由也對應api)
+app.use("/api/v1/meta", metaRouter);
 
 //*** 第 5 階段：健康檢查 ***
 app.get("/healthcheck", (req, res) => {

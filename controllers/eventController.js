@@ -1,5 +1,6 @@
 const { dataSource } = require("../db/data-source");
 //const { generateAccessJWT } = require("../utils/jwtUtils.js");
+const { In } = require("typeorm"); // ← 一定要引入！
 const {
   isUndefined,
   isNotValidString,
@@ -156,6 +157,120 @@ const eventController = {
       return next(appError(500, "伺服器錯誤，無法建立活動"));
     } finally {
       //最後一定要釋放資料庫連線
+      await queryRunner.release();
+    }
+  },
+
+  /**
+   * ###### =====> 這裡是先暫時做 <======= 看效果
+   *   * @description 創建活動 (創建活動表單 第二段)
+   *
+   */
+  async updateNoticesTags(req, res, next) {
+    //取得會員id
+    const memberId = req.user.id; // 從 JWT middleware 解析出會員 ID
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    //取得event_info_id
+    const { eventId } = req.params;
+
+    //// 預設空陣列，避免 undefined
+    const { notices = [], tagIds = [] } = req.body;
+
+    //必須要帶eventId
+    if (!eventId) {
+      return next(appError(400, "缺少 eventId"));
+    }
+
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      //創建活動typeorm entity物件
+      const eventRepo = queryRunner.manager.getRepository("EventInfo");
+      //創建行前提醒 entity物件
+      const eventNoticeRepo = queryRunner.manager.getRepository("EventNotice");
+      //創建活動標籤 entity物件
+      const eventTagInfoRepo = queryRunner.manager.getRepository("EventTagInfo");
+
+      const eventTagRepo = queryRunner.manager.getRepository("EventTag");
+
+      //檢查活動是否存在
+      const existEvent = await eventRepo.findOne({
+        where: { id: eventId },
+      });
+
+      if (!existEvent) {
+        await queryRunner.rollbackTransaction();
+        return next(appError(404, "該活動不存在"));
+      }
+      // 先刪除原有行前提醒 刪除舊的 notices
+      await eventNoticeRepo.delete({ event_info_id: eventId });
+
+      //// 逐筆新增新的 notices
+      if (notices.length > 0) {
+        const newNotices = notices.map((notice) => ({
+          event_info_id: eventId,
+          type: notice.type || "行前提醒",
+          content: notice.content,
+        }));
+
+        await eventNoticeRepo.save(newNotices);
+      }
+
+      // 先刪除原有的標籤 刪除舊的 tags
+      await eventTagInfoRepo.delete({ event_info_id: eventId });
+
+      // 逐筆新增新的標籤連結 // 批次新增新的 tag 連結
+      if (tagIds.length > 0) {
+        const newTagLinks = tagIds.map((tagId) =>
+          eventTagInfoRepo.create({
+            event_info_id: eventId,
+            event_tag_id: tagId,
+          })
+        );
+        await eventTagInfoRepo.save(newTagLinks);
+      }
+
+      // 查詢 tag 詳細資料 (必須是最後新增完再查)
+      let selectedTags = [];
+      if (tagIds.length > 0) {
+        selectedTags = await eventTagRepo.find({
+          //   where: { id: tagIds }, // TypeORM find 不能直接 where array
+          where: {
+            id: In(tagIds), // 正確的用法=> 陣列
+          },
+          select: ["id", "name", "description", "level"],
+        });
+      }
+
+      // 一切成功，提交交易
+      await queryRunner.commitTransaction();
+
+      return res.status(200).json({
+        status: "success",
+        message: "行前提醒與標籤更新成功",
+        data: {
+          event_id: eventId,
+          notices_updated: notices.length,
+          tags_updated: tagIds.length,
+          notices,
+          tags: selectedTags,
+        },
+      });
+    } catch (error) {
+      console.error("updateNoticesTags 錯誤：", error); // ⭐ 加這行！！
+      try {
+        await queryRunner.rollbackTransaction();
+      } catch (rollbackErr) {
+        logger.error("rollbackTransaction 出錯", rollbackErr);
+      }
+      logger.error("更新行前提醒與標籤失敗", error);
+      return next(appError(500, "伺服器錯誤，請稍後再試"));
+    } finally {
       await queryRunner.release();
     }
   },
