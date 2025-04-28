@@ -18,4 +18,45 @@ router.patch(
   errorAsync(eventController.updateNoticesTags)
 );
 
+// 取得【某活動】所有圖片（公開，不用登入）
+router.get(
+  "/:eventId/images",
+  errorAsync(eventController.getEventPhotos) // ← 查所有圖片
+);
+
+//新增露營活動圖片detail(最多六張)
+router.post(
+  "/:eventId/images",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(eventController.uploadEventPhotos)
+);
+
+// 取得單一圖片資訊（公開）
+router.get("/:eventId/images/:imageId", errorAsync(eventController.getSingleEventPhoto));
+
+// 更新圖片描述
+router.patch(
+  "/:eventId/images/:imageId",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(eventController.updateImageDescription)
+);
+
+// 刪除圖片
+router.delete(
+  "/:eventId/images/:imageId",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(eventController.deleteImage)
+);
+
+// 設定活動的封面圖片（指定一張 cover）
+router.patch(
+  "/:eventId/images/:imageId/set-cover",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(eventController.setCoverImage)
+);
+
 module.exports = router;

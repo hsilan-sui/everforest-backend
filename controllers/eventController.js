@@ -8,7 +8,10 @@ const {
   isNotValidInteger,
 } = require("../utils/validUtils");
 const appError = require("../utils/appError");
+const formidable = require("formidable");
 const logger = require("../utils/logger")("Event");
+
+const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 
 const eventController = {
   /**
@@ -162,7 +165,7 @@ const eventController = {
   },
 
   /**
-   * ###### =====> 這裡是先暫時做 <======= 看效果
+   * ###### =====> 暫時做 <======= 看效果
    *   * @description 創建活動 (創建活動表單 第二段)
    *
    */
@@ -273,6 +276,211 @@ const eventController = {
     } finally {
       await queryRunner.release();
     }
+  },
+  /**
+   * 取得所有圖片列表（公開）
+   */
+  async getEventPhotos(req, res, _next) {
+    const { eventId } = req.params;
+    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
+
+    const photos = await eventPhotoRepo.find({
+      where: { event_info_id: eventId },
+      order: { created_at: "ASC" },
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "取得活動圖片成功",
+      data: photos.map((photo) => ({
+        imageId: photo.id,
+        event_info_id: photo.event_info_id,
+        imageUrl: photo.photo_url,
+        description: photo.description,
+        type: photo.type,
+        created_at: photo.created_at,
+      })),
+    });
+  },
+
+  /**
+   * @description 取得單張活動圖片資訊
+   */
+  async getSingleEventPhoto(req, res, next) {
+    const { eventId, imageId } = req.params;
+    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
+
+    const photo = await eventPhotoRepo.findOne({
+      where: { id: imageId, event_info_id: eventId },
+    });
+
+    if (!photo) {
+      return next(appError(404, "找不到指定的圖片"));
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "取得單張圖片成功",
+      data: {
+        imageId: photo.id,
+        event_info_id: photo.event_info_id,
+        imageUrl: photo.photo_url,
+        description: photo.description,
+        type: photo.type,
+        created_at: photo.created_at,
+      },
+    });
+  },
+
+  /**
+   * @description 新增露營活動封面圖片(最多六張)
+   */
+  async uploadEventPhotos(req, res, next) {
+    const { eventId } = req.params; // 取得活動 ID
+    const form = formidable.formidable({ multiples: true }); // ⭐️ 支援多檔案
+
+    const [, files] = await form.parse(req); // ⭐️ 先 parse req，才能拿到 files
+
+    const imageFiles = files.file || []; // 取得 files
+    const imageArray = Array.isArray(imageFiles) ? imageFiles : [imageFiles]; // 保證一定是陣列
+
+    if (imageArray.length === 0) {
+      return next(appError(400, "請至少上傳一張圖片"));
+    }
+
+    if (imageArray.length > 6) {
+      return next(appError(400, "最多只能上傳 6 張圖片"));
+    }
+
+    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
+    const uploadedPhotos = [];
+
+    for (const imageFile of imageArray) {
+      if (!imageFile) continue;
+
+      if (!ALLOWED_FILE_TYPES[imageFile.mimetype]) {
+        return next(appError(400, "圖片格式錯誤，僅支援 JPG、PNG 格式"));
+      }
+
+      const imageUrl = await uploadImageFile(imageFile, "event-photos");
+
+      const newPhoto = eventPhotoRepo.create({
+        event_info_id: eventId,
+        photo_url: imageUrl,
+        type: "cover", // 預設是 cover，可以未來 PATCH 調整
+      });
+
+      const savedPhoto = await eventPhotoRepo.save(newPhoto);
+
+      uploadedPhotos.push({
+        imageId: savedPhoto.id,
+        event_info_id: savedPhoto.event_info_id,
+        imageUrl: savedPhoto.photo_url,
+        type: savedPhoto.type,
+      });
+    }
+
+    return res.status(201).json({
+      status: "success",
+      message: "圖片上傳成功",
+      data: uploadedPhotos,
+    });
+  },
+
+  /**
+   * @description  更新圖片描述
+   * * PATCH /api/v1/events/:eventId/images/:imageId
+   */
+  async updateImageDescription(req, res, next) {
+    const { eventId, imageId } = req.params;
+    const { description } = req.body;
+
+    if (!description) {
+      return next(appError(400, "缺少必要的 description"));
+    }
+
+    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
+
+    const targetPhoto = await eventPhotoRepo.findOne({
+      where: { id: imageId, event_info_id: eventId },
+    });
+
+    if (!targetPhoto) {
+      return next(appError(404, "找不到指定的圖片"));
+    }
+
+    targetPhoto.description = description;
+    await eventPhotoRepo.save(targetPhoto);
+
+    return res.status(200).json({
+      status: "success",
+      message: "圖片描述更新成功",
+      data: {
+        imageId: targetPhoto.id,
+        event_info_id: targetPhoto.event_info_id,
+        description: targetPhoto.description,
+      },
+    });
+  },
+  /**
+   * @description 刪除圖片
+   * DELETE /api/v1/events/:eventId/images/:imageId
+   */
+  async deleteImage(req, res, next) {
+    const { eventId, imageId } = req.params;
+
+    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
+
+    const targetPhoto = await eventPhotoRepo.findOne({
+      where: { id: imageId, event_info_id: eventId },
+    });
+
+    if (!targetPhoto) {
+      return next(appError(404, "找不到指定的圖片"));
+    }
+
+    await eventPhotoRepo.delete({ id: imageId });
+
+    return res.status(200).json({
+      status: "success",
+      message: "圖片刪除成功",
+      data: {
+        imageId: imageId,
+        event_info_id: eventId,
+      },
+    });
+  },
+
+  async setCoverImage(req, res, next) {
+    const { eventId, imageId } = req.params;
+    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
+
+    // 先確認這張圖片存在且屬於這個活動
+    const targetPhoto = await eventPhotoRepo.findOne({
+      where: { id: imageId, event_info_id: eventId },
+    });
+
+    if (!targetPhoto) {
+      return next(appError(404, "找不到指定的圖片"));
+    }
+
+    // 把這個活動其他圖片的 type 改成 detail
+    await eventPhotoRepo.update({ event_info_id: eventId, type: "cover" }, { type: "detail" });
+
+    // 把這張圖片設成 cover
+    targetPhoto.type = "cover";
+    await eventPhotoRepo.save(targetPhoto);
+
+    return res.status(200).json({
+      status: "success",
+      message: "封面圖片設定成功",
+      data: {
+        imageId: targetPhoto.id,
+        event_info_id: targetPhoto.event_info_id,
+        photo_url: targetPhoto.photo_url,
+        type: targetPhoto.type,
+      },
+    });
   },
 };
 

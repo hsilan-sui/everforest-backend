@@ -17,7 +17,8 @@ module.exports = new EntitySchema({
     type: {
       type: "enum",
       enum: ["cover", "detail"],
-      nullable: true,
+      default: "detail", // 預設就是 detail
+      nullable: false, //一定要有值，不能空
     },
     photo_url: {
       type: "varchar",
