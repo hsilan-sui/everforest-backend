@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安裝 npm 套件
-RUN npm install
+RUN npm ci
 
 # 安裝 hot reload 工具
 #RUN npm install nodemon
