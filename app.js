@@ -17,6 +17,7 @@ const setupSwagger = require("./swagger");
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
 
+
 if (process.env.NODE_ENV !== "production") {
   dotenv.config({
     path: path.resolve(process.cwd(), ".env"),
@@ -65,6 +66,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
+
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/member", memberRouter);
