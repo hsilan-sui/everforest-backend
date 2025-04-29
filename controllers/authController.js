@@ -131,7 +131,7 @@ const authController = {
     res.cookie("access_token", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
-      sameSite: "Strict",
+      sameSite: "None",
       maxAge: 1000 * 60 * 15, // 15 分鐘
       path: "/",
     });
@@ -140,7 +140,7 @@ const authController = {
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
-      sameSite: "Strict",
+      sameSite: "None",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
       path: "/",
     });
@@ -220,7 +220,7 @@ const authController = {
     res.cookie("access_token", newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
-      sameSite: "Strict",
+      sameSite: "None",
       maxAge: 1000 * 60 * 15, // 15分鐘
       path: "/",
     });
@@ -243,13 +243,15 @@ const authController = {
     res.clearCookie("access_token", {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
-      sameSite: "Strict",
+      sameSite: "None",
+      path: "/",
     });
 
     res.clearCookie("refresh_token", {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
-      sameSite: "Strict",
+      sameSite: "None",
+      path: "/",
     });
 
     return res.status(200).json({
