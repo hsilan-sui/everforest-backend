@@ -8,8 +8,8 @@ WORKDIR /app
 # 複製 package 檔案並安裝依賴(提高快取命中率)
 COPY package*.json ./
 
-# 安裝 npm 套件，跳過 husky 等 scripts
-RUN npm install --ignore-scripts
+# 安裝 npm 套件
+RUN npm install
 
 # 安裝 hot reload 工具
 #RUN npm install nodemon
