@@ -482,6 +482,107 @@ const eventController = {
       },
     });
   },
+
+  /**
+   *
+   * @description 新增活動方案
+   * @param {string} eventId - 活動 ID
+   * @param {Array} plans - 活動方案資料
+   * @param {string} plans[].title - 方案名稱
+   * @param {number} plans[].price - 原價
+   * @param {number} plans[].discounted_price - 折扣價
+   * @param {Array} plans[].contents - 方案內容
+   * @param {Array} plans[].addons - 加購品
+   * @param {string} plans[].addons[].name - 加購品名稱
+   * @param {number} plans[].addons[].price - 加購品價格
+
+   */
+  async createEventPlans(req, res, next) {
+    //const memberId = req.user.id;
+    const { eventId } = req.params;
+    const { plans = [] } = req.body;
+
+    if (!eventId || !plans.length) {
+      return next(appError(400, "缺少活動 ID 或方案資料"));
+    }
+
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const eventRepo = queryRunner.manager.getRepository("EventInfo");
+      const planRepo = queryRunner.manager.getRepository("EventPlan");
+      const contentRepo = queryRunner.manager.getRepository("EventPlanContent");
+      const addonRepo = queryRunner.manager.getRepository("EventPlanAddon");
+
+      const event = await eventRepo.findOne({ where: { id: eventId } });
+      if (!event) {
+        await queryRunner.rollbackTransaction();
+        return next(appError(404, "找不到對應的活動"));
+      }
+
+      const createdPlans = [];
+
+      for (const plan of plans) {
+        const { title, price, discounted_price, contents = [], addons = [] } = plan;
+
+        const newPlan = planRepo.create({
+          event_info_id: eventId,
+          title,
+          price,
+          discounted_price: discounted_price || null,
+        });
+
+        const savedPlan = await planRepo.save(newPlan);
+
+        // 建立內容
+        const newContents = contents.map((c) =>
+          contentRepo.create({
+            event_plan_id: savedPlan.id,
+            content: c,
+          })
+        );
+        await contentRepo.save(newContents);
+
+        // 建立加購品
+        const newAddons = addons.map((a) =>
+          addonRepo.create({
+            event_plan_id: savedPlan.id,
+            name: a.name,
+            price: a.price,
+          })
+        );
+        await addonRepo.save(newAddons);
+
+        createdPlans.push({
+          id: savedPlan.id,
+          title: savedPlan.title,
+          price: savedPlan.price,
+          discounted_price: savedPlan.discounted_price,
+          contents: newContents.map((c) => c.content),
+          addons: newAddons.map((a) => ({ name: a.name, price: a.price })),
+        });
+      }
+
+      await queryRunner.commitTransaction();
+
+      return res.status(201).json({
+        status: "success",
+        message: "活動方案建立成功",
+        data: {
+          event_info_id: eventId,
+          plans: createdPlans,
+        },
+      });
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      console.error("createEventPlans 錯誤：", error);
+      return next(appError(500, "伺服器錯誤，建立活動方案失敗"));
+    } finally {
+      await queryRunner.release();
+    }
+  },
 };
 
 module.exports = eventController;

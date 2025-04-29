@@ -59,4 +59,12 @@ router.patch(
   errorAsync(eventController.setCoverImage)
 );
 
+// 建立活動方案 活動方案內容 活動加購
+router.post(
+  "/:eventId/plans",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(eventController.createEventPlans)
+);
+
 module.exports = router;
