@@ -244,7 +244,6 @@ const authController = {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
       sameSite: "None",
-      domain: ".vercel.app",
       path: "/",
     });
 
@@ -252,7 +251,6 @@ const authController = {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
       sameSite: "None",
-      domain: ".vercel.app",
       path: "/",
     });
 
