@@ -16,6 +16,7 @@ const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 const eventController = {
   /**
    *   * @description 創建活動 (創建活動表單 第一段)
+   *
    */
   async createEvent(req, res, next) {
     //取得會員id
@@ -161,6 +162,52 @@ const eventController = {
     } finally {
       //最後一定要釋放資料庫連線
       await queryRunner.release();
+    }
+  },
+  /**
+   * @description 取得主辦方自己的活動詳情（包含草稿、未上架等）
+   */
+  async getHostOwnedEvent(req, res, next) {
+    const { eventId } = req.params;
+    const memberId = req.user.id;
+
+    if (!eventId) return next(appError(400, "缺少活動 ID"));
+
+    const hostRepo = dataSource.getRepository("HostInfo");
+    const eventRepo = dataSource.getRepository("EventInfo");
+
+    try {
+      const host = await hostRepo.findOne({
+        where: { member_info_id: memberId },
+      });
+
+      if (!host) return next(appError(403, "尚未建立主辦方資料"));
+
+      const event = await eventRepo.findOne({
+        where: {
+          id: eventId,
+          hostBox: { id: host.id }, // 正確比對 HostInfo.id
+        },
+        relations: [
+          "hostBox",
+          "eventPhotoBox",
+          "eventNoticeBox",
+          "eventPlanBox",
+          "eventPlanBox.eventPlanContentBox",
+          "eventPlanBox.eventPlanAddonBox",
+          "eventCommentBox",
+        ],
+      });
+
+      if (!event) return next(appError(404, "找不到該活動或您無權查看"));
+
+      return res.status(200).json({
+        status: "success",
+        message: "取得主辦活動詳情成功",
+        data: event,
+      });
+    } catch (err) {
+      next(err);
     }
   },
 
@@ -451,6 +498,7 @@ const eventController = {
     });
   },
 
+  //設定活動圖片為封面
   async setCoverImage(req, res, next) {
     const { eventId, imageId } = req.params;
     const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
@@ -581,6 +629,247 @@ const eventController = {
       return next(appError(500, "伺服器錯誤，建立活動方案失敗"));
     } finally {
       await queryRunner.release();
+    }
+  },
+
+  /**
+   *
+   * @description 取得活動方案
+
+   */
+  async getEventPlans(req, res, next) {
+    const { eventId } = req.params;
+    if (!eventId) {
+      return next(appError(400, "缺少活動 ID"));
+    }
+
+    const planRepo = dataSource.getRepository("EventPlan");
+    const eventRepo = dataSource.getRepository("EventInfo");
+
+    // 先確認活動是否存在
+    const event = await eventRepo.findOne({ where: { id: eventId } });
+    if (!event) {
+      return next(appError(404, "找不到對應的活動"));
+    }
+
+    // 查詢活動方案，直接連同 contents 和 addons 關聯資料
+    const plans = await planRepo.find({
+      where: { event_info_id: eventId },
+      relations: ["eventPlanContentBox", "eventPlanAddonBox"],
+    });
+
+    // 整理成需要的格式
+    const planDetails = plans.map((plan) => ({
+      id: plan.id,
+      title: plan.title,
+      price: plan.price,
+      discounted_price: plan.discounted_price,
+      contents: Array.isArray(plan.eventPlanContentBox)
+        ? plan.eventPlanContentBox.map((c) => c.content)
+        : [],
+      addons: Array.isArray(plan.eventPlanAddonBox)
+        ? plan.eventPlanAddonBox.map((a) => ({ name: a.name, price: a.price }))
+        : [],
+    }));
+
+    return res.status(200).json({
+      status: "success",
+      message: "取得活動方案成功",
+      data: {
+        event_info_id: eventId,
+        plans: planDetails,
+      },
+    });
+  },
+  /**
+   * @description 更新活動方案（支援有 id 更新、無 id 新增）
+   *
+   * 前端傳入 plans 陣列：
+   * - 有 id：更新該筆方案（並清除並重建 contents 和 addons）
+   * - 無 id：新增新的方案及其 contents 和 addons
+   *
+   * 全程使用資料庫 Transaction，確保資料一致性。
+   */
+  async updateEventPlans(req, res, next) {
+    // 從 URL 參數與 body 中取得 eventId 與 plans
+    const { eventId } = req.params;
+    const { plans = [] } = req.body;
+
+    // 驗證基本輸入
+    if (!eventId || !plans.length) {
+      return next(appError(400, "缺少活動 ID 或方案資料"));
+    }
+
+    // 初始化各資料表 Repository
+    const planRepo = dataSource.getRepository("EventPlan");
+    const contentRepo = dataSource.getRepository("EventPlanContent");
+    const addonRepo = dataSource.getRepository("EventPlanAddon");
+    const eventRepo = dataSource.getRepository("EventInfo");
+
+    // 建立 QueryRunner，啟動資料庫 Transaction
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 查詢活動是否存在
+      const event = await eventRepo.findOne({ where: { id: eventId } });
+      if (!event) {
+        throw appError(404, "找不到對應的活動");
+      }
+
+      // 開始處理每一筆傳入的 plans
+      for (const planData of plans) {
+        const { id, title, price, discounted_price, contents = [], addons = [] } = planData;
+        let plan;
+
+        if (id) {
+          // 有 id：表示要更新既有方案
+          plan = await planRepo.findOne({ where: { id, event_info_id: eventId } });
+          if (!plan) {
+            throw appError(404, `找不到要更新的方案 ID：${id}`);
+          }
+
+          // 更新方案基本資訊
+          plan.title = title;
+          plan.price = price;
+          plan.discounted_price = discounted_price;
+          await planRepo.save(plan);
+
+          // 清空舊的 contents 和 addons
+          await contentRepo.delete({ event_plan_id: id });
+          await addonRepo.delete({ event_plan_id: id });
+        } else {
+          // 沒有 id：表示新增新的方案
+          plan = planRepo.create({
+            event_info_id: eventId,
+            title,
+            price,
+            discounted_price,
+          });
+          plan = await planRepo.save(plan); // 儲存後取得新 ID
+        }
+
+        // 建立並儲存新的 contents
+        if (contents.length > 0) {
+          const contentEntities = contents.map((contentStr) =>
+            contentRepo.create({
+              event_plan_id: plan.id,
+              content: contentStr,
+            })
+          );
+          await contentRepo.save(contentEntities);
+        }
+
+        // 建立並儲存新的 addons
+        if (addons.length > 0) {
+          const addonEntities = addons.map((addonObj) =>
+            addonRepo.create({
+              event_plan_id: plan.id,
+              name: addonObj.name,
+              price: addonObj.price,
+            })
+          );
+          await addonRepo.save(addonEntities);
+        }
+      }
+
+      // 全部處理完成，提交 Transaction
+      await queryRunner.commitTransaction();
+
+      // 成功回應
+      return res.status(200).json({
+        status: "success",
+        message: "更新活動方案成功",
+      });
+    } catch (err) {
+      // 若過程中出錯，回滾 Transaction
+      await queryRunner.rollbackTransaction();
+      next(err);
+    } finally {
+      // 最後釋放 QueryRunner 資源
+      await queryRunner.release();
+    }
+  },
+  /**
+   * @description 將活動從草稿(draft)狀態提交上架(published)
+   */
+  async publishEvent(req, res, next) {
+    const { eventId } = req.params;
+
+    if (!eventId) {
+      return next(appError(400, "缺少活動 ID"));
+    }
+
+    const eventRepo = dataSource.getRepository("EventInfo");
+
+    try {
+      // 查詢活動
+      const event = await eventRepo.findOne({ where: { id: eventId } });
+      if (!event) {
+        return next(appError(404, "找不到對應的活動"));
+      }
+
+      // 檢查目前狀態
+      if (event.active !== "draft") {
+        return next(appError(400, "只有草稿狀態的活動才能上架"));
+      }
+
+      // 更新狀態為 published
+      event.active = "published";
+      await eventRepo.save(event);
+
+      return res.status(200).json({
+        status: "success",
+        message: "活動成功上架",
+        data: {
+          eventId: event.id,
+          status: event.active,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  /// ================== 給前臺 =======================
+  /**
+   * @description 取得公開活動詳情（只限已上架活動 published）
+   */
+  async getPublicEvent(req, res, next) {
+    const { eventId } = req.params;
+
+    if (!eventId) {
+      return next(appError(400, "缺少活動 ID"));
+    }
+
+    const eventRepo = dataSource.getRepository("EventInfo");
+
+    try {
+      const event = await eventRepo.findOne({
+        where: { id: eventId, active: "published" }, // ✅ 只抓上架的活動
+        relations: [
+          "hostBox",
+          "eventPhotoBox",
+          "eventNoticeBox",
+          "eventPlanBox",
+          "eventPlanBox.eventPlanContentBox",
+          "eventPlanBox.eventPlanAddonBox",
+          "eventCommentBox",
+        ],
+      });
+
+      if (!event) {
+        return next(appError(404, "活動不存在或尚未上架"));
+      }
+
+      return res.status(200).json({
+        status: "success",
+        message: "取得公開活動詳情成功",
+        data: event,
+      });
+    } catch (err) {
+      next(err);
     }
   },
 };
