@@ -847,7 +847,7 @@ const eventController = {
 
     try {
       const event = await eventRepo.findOne({
-        where: { id: eventId, active: "published" }, // ✅ 只抓上架的活動
+        where: { id: eventId, active: "published" }, // 只抓上架的活動
         relations: [
           "hostBox",
           "eventPhotoBox",

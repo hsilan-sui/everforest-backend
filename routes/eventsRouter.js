@@ -667,7 +667,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/v1/events/{eventId}/public:
+ * /api/v1/events/{eventId}:
  *   get:
  *     summary: 取得公開活動詳情（僅限已上架活動）
  *     tags: [Events]
@@ -700,6 +700,6 @@ router.patch(
  */
 
 // 新增公開取得活動詳情的 route（無需驗證）
-router.get("/:eventId/public", errorAsync(eventController.getPublicEvent));
+router.get("/:eventId", errorAsync(eventController.getPublicEvent));
 
 module.exports = router;
