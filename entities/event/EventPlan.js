@@ -1,8 +1,8 @@
 const { EntitySchema } = require("typeorm");
 
 module.exports = new EntitySchema({
-  name: "EventInfoPhoto",
-  tableName: "EVENT_INFO_PHOTO",
+  name: "EventPlan",
+  tableName: "EVENT_PLAN",
   columns: {
     id: {
       type: "uuid",
@@ -14,19 +14,17 @@ module.exports = new EntitySchema({
       type: "uuid",
       nullable: false,
     },
-    type: {
-      type: "enum",
-      enum: ["cover", "detail"],
-      default: "detail", // 預設就是 detail
-      nullable: false, //一定要有值，不能空
-    },
-    photo_url: {
+    title: {
       type: "varchar",
-      length: 1024,
+      length: 100,
       nullable: false,
     },
-    description: {
-      type: "text",
+    price: {
+      type: "integer",
+      nullable: false,
+    },
+    discounted_price: {
+      type: "integer",
       nullable: true,
     },
     created_at: {
@@ -37,19 +35,29 @@ module.exports = new EntitySchema({
     updated_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
-      onUpdate: "CURRENT_TIMESTAMP",
+      onUpdate: () => "CURRENT_TIMESTAMP",
       nullable: false,
     },
   },
   relations: {
     eventBox: {
-      type: "many-to-one",
+      type: "many-to-one", //多個方案可以對應一個露營活動
       target: "EventInfo",
       joinColumn: {
         name: "event_info_id",
       },
-      inverseSide: "eventPhotoBox",
+      inverseSide: "eventPlanBox",
       onDelete: "CASCADE",
+    },
+    eventPlanAddonBox: {
+      type: "one-to-many",
+      target: "EventPlanAddon",
+      inverseSide: "eventPlanBox",
+    },
+    eventPlanContentBox: {
+      type: "one-to-many",
+      target: "EventPlanContent",
+      inverseSide: "eventPlanBox",
     },
   },
 });

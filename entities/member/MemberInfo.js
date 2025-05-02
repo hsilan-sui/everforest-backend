@@ -116,5 +116,11 @@ module.exports = new EntitySchema({
       inverseSide: "memberBox", // 與target:MemberAuthProvider 中relations關聯變數 `memberBox` 對應
       cascade: true,
     },
+    eventCommentBox: {
+      type: "one-to-many",
+      target: "EventComment",
+      inverseSide: "memberBox", // 與target:EventComment 中relations關聯變數 `memberBox` 對應
+      cascade: true,
+    },
   },
 });

@@ -57,11 +57,11 @@ const memberController = {
     }
 
     if (
-      isNotValidString(firstname) ||
-      isNotValidString(lastname) ||
-      isNotValidString(gender) ||
-      !isValidDate(birth) ||
-      !isValidURL(photo_url)
+      (firstname && isNotValidString(firstname)) ||
+      (lastname && isNotValidString(lastname)) ||
+      (gender && isNotValidString(gender)) ||
+      (birth && !isValidDate(birth)) ||
+      (photo_url && !isValidURL(photo_url))
     ) {
       return next(appError(400, "欄位未填寫正確"));
     }

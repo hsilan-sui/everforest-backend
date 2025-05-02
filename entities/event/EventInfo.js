@@ -81,7 +81,7 @@ module.exports = new EntitySchema({
     updated_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
-      onUpdate: "CURRENT_TIMESTAMP",
+      onUpdate: () => "CURRENT_TIMESTAMP",
       nullable: false,
     },
   },
@@ -98,6 +98,21 @@ module.exports = new EntitySchema({
     eventPhotoBox: {
       type: "one-to-many",
       target: "EventInfoPhoto",
+      inverseSide: "eventBox",
+    },
+    eventNoticeBox: {
+      type: "one-to-many",
+      target: "EventNotice",
+      inverseSide: "eventBox",
+    },
+    eventPlanBox: {
+      type: "one-to-many",
+      target: "EventPlan",
+      inverseSide: "eventBox",
+    },
+    eventCommentBox: {
+      type: "one-to-many",
+      target: "EventComment",
       inverseSide: "eventBox",
     },
   },

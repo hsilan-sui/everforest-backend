@@ -5,5 +5,9 @@ module.exports = {
   firebase: {
     serviceAccount: JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT),
     storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    // serviceAccount: process.env.FIREBASE_SERVICE_ACCOUNT
+    //   ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    //   : null,
+    // storageBucket: process.env.FIREBASE_STORAGE_BUCKET || null,
   },
 };
