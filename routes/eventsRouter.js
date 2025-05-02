@@ -18,7 +18,13 @@ const eventController = require("../controllers/eventController");
  * @swagger
  * /api/v1/events:
  *   post:
- *     summary: 創建一筆新的活動
+ *     summary: 建立一筆新的活動
+ *     description: |
+ *       僅限已登入的主辦方使用，用來建立活動基本資料。
+ *
+ *       ⚠️ 注意：主辦方需先建立 Host_Info 資料，否則會回傳 403。
+ *
+ *       ✅ 成功後會儲存為active為'draft'狀態，可後續補上圖片、方案、提醒等資料。
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -39,38 +45,144 @@ const eventController = require("../controllers/eventController");
  *             properties:
  *               title:
  *                 type: string
+ *                 example: 夏日山林兩天一夜營隊
  *               address:
  *                 type: string
+ *                 example: 南投縣仁愛鄉合歡山
  *               description:
  *                 type: string
+ *                 example: 深入山林、觀星露營、野炊體驗
  *               start_time:
  *                 type: string
  *                 format: date-time
+ *                 example: 2025-08-10T09:00:00+08:00
  *               end_time:
  *                 type: string
  *                 format: date-time
+ *                 example: 2025-08-11T17:00:00+08:00
  *               max_participants:
  *                 type: integer
+ *                 example: 40
  *               cancel_policy:
  *                 type: string
+ *                 example: 活動前 7 日可全額退費
  *               registration_open_time:
  *                 type: string
  *                 format: date-time
+ *                 nullable: true
+ *                 example: 2025-07-01T00:00:00+08:00
  *               registration_close_time:
  *                 type: string
  *                 format: date-time
+ *                 nullable: true
+ *                 example: 2025-08-05T23:59:59+08:00
  *               latitude:
  *                 type: number
+ *                 nullable: true
+ *                 example: 24.1801
  *               longitude:
  *                 type: number
+ *                 nullable: true
+ *                 example: 121.3105
  *     responses:
  *       201:
  *         description: 活動建立成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 露營活動建立成功
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     event:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         host_info_id:
+ *                           type: string
+ *                         title:
+ *                           type: string
+ *                         status:
+ *                           type: string
+ *                           example: preparing
+ *                         active:
+ *                           type: string
+ *                           example: draft
  *       400:
- *         description: 請求格式錯誤或缺少欄位
+ *         description: 必填欄位驗證錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 請填寫必填欄位
+ *       401:
+ *         description: 未登入
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 請先登入會員
+ *       403:
+ *         description: 尚未建立主辦方資料
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 尚未建立主辦方資料
  *       409:
- *         description: 活動已存在
+ *         description: 該活動已存在（主辦方 + 標題 + 起始時間相同）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 該活動已存在，請勿重複建立
+ *       500:
+ *         description: 資料庫錯誤或交易失敗
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤，請稍後再試
  */
+
 router.post("/", checkAuth, restrictTo("host"), errorAsync(eventController.createEvent));
 
 /**
@@ -110,6 +222,7 @@ router.get(
  * /api/v1/events/{eventId}/notices-tags:
  *   patch:
  *     summary: 更新活動的行前提醒與標籤
+ *     description: 主辦方更新指定活動的行前提醒與標籤。若陣列為空則代表清除所有設定。
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -117,9 +230,9 @@ router.get(
  *       - in: path
  *         name: eventId
  *         required: true
+ *         description: 活動 ID
  *         schema:
  *           type: string
- *         description: 活動 ID
  *     requestBody:
  *       required: true
  *       content:
@@ -127,9 +240,13 @@ router.get(
  *           schema:
  *             type: object
  *             properties:
+ *               tagIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
  *               notices:
  *                 type: array
- *                 description: 行前提醒陣列
  *                 items:
  *                   type: object
  *                   properties:
@@ -138,19 +255,85 @@ router.get(
  *                       example: 行前提醒
  *                     content:
  *                       type: string
- *                       example: 請攜帶防蚊液
+ *                       example: 請記得攜帶身分證件
+ *             example:
  *               tagIds:
- *                 type: array
- *                 description: 標籤 ID 陣列
- *                 items:
- *                   type: string
+ *                 - "7c3a2e10-8baf-4c42-a7e1-21f1e1b993f3"
+ *                 - "a9e8d9c7-3f25-456a-abc9-0a5de40c730e"
+ *               notices:
+ *                 - type: 行前提醒
+ *                   content: 請記得攜帶身分證件
+ *                 - type: 行前提醒
+ *                   content: 活動地點無停車位，請搭乘大眾運輸
  *     responses:
  *       200:
- *         description: 行前提醒與標籤更新成功
+ *         description: 成功更新行前提醒與標籤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 status: success
+ *                 message: 行前提醒與標籤更新成功
+ *                 data:
+ *                   event_id: b329c845-6bc2-4b5d-982e-7a861121fd2b
+ *                   notices_updated: 2
+ *                   tags_updated: 2
+ *                   notices:
+ *                     - type: 行前提醒
+ *                       content: 請記得攜帶身分證件
+ *                     - type: 行前提醒
+ *                       content: 活動地點無停車位，請搭乘大眾運輸
+ *                   tags:
+ *                     - id: 7c3a2e10-8baf-4c42-a7e1-21f1e1b993f3
+ *                       name: 寵物友善
+ *                       description: 適合攜帶寵物參加的活動
+ *                       level: 1
+ *                     - id: a9e8d9c7-3f25-456a-abc9-0a5de40c730e
+ *                       name: 秘境探索
+ *                       description: 探訪不為人知的自然景點
+ *                       level: 3
  *       400:
- *         description: 缺少必要欄位
- *       404:
- *         description: 找不到對應的活動
+ *         description: 缺少活動 ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 status: failed
+ *                 message: 尚未建立活動
+ *       401:
+ *         description: 未登入會員
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 status: failed
+ *                 message: 請先登入會員
+ *       403:
+ *         description: 權限錯誤或主辦方資料不存在
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - type: object
+ *                   example:
+ *                     status: failed
+ *                     message: 尚未建立主辦方資料
+ *                 - type: object
+ *                   example:
+ *                     status: failed
+ *                     message: 權限異常或活動不存在
+ *       500:
+ *         description: 系統內部錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               example:
+ *                 status: error
+ *                 message: 伺服器錯誤，請稍後再試
  */
 
 router.patch(
@@ -268,7 +451,8 @@ router.get("/:eventId/images/:imageId", errorAsync(eventController.getSingleEven
  * @swagger
  * /api/v1/events/{eventId}/images:
  *   post:
- *     summary: 上傳活動圖片（最多六張）
+ *     summary: 上傳活動圖片（封面圖或詳情圖）
+ *     description: 需登入並擁有活動主辦權限。可上傳最多 3 張封面圖或詳情圖，僅支援 JPG / PNG 格式。
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -279,6 +463,13 @@ router.get("/:eventId/images/:imageId", errorAsync(eventController.getSingleEven
  *         schema:
  *           type: string
  *         description: 活動 ID
+ *       - in: query
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [cover, detail]
+ *         description: 圖片類型，可為 `cover`（封面圖）或 `detail`（詳情圖）
  *     requestBody:
  *       required: true
  *       content:
@@ -291,13 +482,85 @@ router.get("/:eventId/images/:imageId", errorAsync(eventController.getSingleEven
  *                 items:
  *                   type: string
  *                   format: binary
- *                 description: 最多上傳 6 張 JPG/PNG 圖片
+ *                 description: 上傳的圖片檔案（最多 3 張）
+ *               descriptions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 圖片對應的描述內容（只有 `type=detail` 時使用）
  *     responses:
  *       201:
- *         description: 圖片上傳成功
+ *         description: 上傳成功，回傳每張圖片資訊
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 封面圖上傳成功
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       imageId:
+ *                         type: string
+ *                       event_info_id:
+ *                         type: string
+ *                       imageUrl:
+ *                         type: string
+ *                         format: uri
+ *                       type:
+ *                         type: string
+ *                         enum: [cover, detail]
+ *                       description:
+ *                         type: string
+ *                         nullable: true
  *       400:
- *         description: 上傳錯誤（例如張數超過、格式錯誤）
+ *         description: 上傳錯誤（格式錯誤、檔案數量超過、缺少必要欄位等）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 請至少上傳一張圖片
+ *       401:
+ *         description: 未授權，請先登入
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 請先登入會員
+ *       403:
+ *         description: 無權限上傳此活動圖片
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 尚未建立主辦方資料
  */
+
 router.post(
   "/:eventId/images",
   checkAuth,
@@ -305,119 +568,6 @@ router.post(
   errorAsync(eventController.uploadEventPhotos)
 );
 
-/**
- * @swagger
- * /api/v1/events/{eventId}/images/{imageId}:
- *   patch:
- *     summary: 更新活動圖片描述
- *     tags: [Events]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: eventId
- *         required: true
- *         schema:
- *           type: string
- *         description: 活動 ID
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: string
- *         description: 圖片 ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               description:
- *                 type: string
- *                 example: 這是封面圖片
- *     responses:
- *       200:
- *         description: 圖片描述更新成功
- *       400:
- *         description: 缺少必要的 description 欄位
- *       404:
- *         description: 找不到指定的圖片
- */
-router.patch(
-  "/:eventId/images/:imageId",
-  checkAuth,
-  restrictTo("host"),
-  errorAsync(eventController.updateImageDescription)
-);
-
-/**
- * @swagger
- * /api/v1/events/{eventId}/images/{imageId}:
- *   delete:
- *     summary: 刪除指定活動圖片
- *     tags: [Events]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: eventId
- *         required: true
- *         schema:
- *           type: string
- *         description: 活動 ID
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: string
- *         description: 圖片 ID
- *     responses:
- *       200:
- *         description: 圖片刪除成功
- *       404:
- *         description: 找不到指定的圖片
- */
-router.delete(
-  "/:eventId/images/:imageId",
-  checkAuth,
-  restrictTo("host"),
-  errorAsync(eventController.deleteImage)
-);
-/**
- * @swagger
- * /api/v1/events/{eventId}/images/{imageId}/set-cover:
- *   patch:
- *     summary: 設定活動圖片為封面
- *     tags: [Events]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: eventId
- *         required: true
- *         schema:
- *           type: string
- *         description: 活動 ID
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: string
- *         description: 圖片 ID
- *     responses:
- *       200:
- *         description: 成功設定為封面圖片
- *       404:
- *         description: 找不到指定的圖片
- */
-// 設定活動的封面圖片（指定一張 cover）
-router.patch(
-  "/:eventId/images/:imageId/set-cover",
-  checkAuth,
-  restrictTo("host"),
-  errorAsync(eventController.setCoverImage)
-);
 /**
  * @swagger
  * /api/v1/events/{eventId}/plans:

@@ -20,21 +20,27 @@ const FILE_SIZE_LIMITS = {
   "member-avatar": 2 * 1024 * 1024, // 2MB
   "host-avatar": 2 * 1024 * 1024, // 2MB
   "host-cover": 4 * 1024 * 1024, // 4MB
+  "event-cover": 4 * 1024 * 1024,
+  "event-detail": 4 * 1024 * 1024,
 };
 
+//支援的 MIME 類型
 const ALLOWED_FILE_TYPES = {
   "image/jpeg": true,
   "image/png": true,
   "image/jpg": true,
 };
 
-// 定義傳遞標籤，在 firebase 做資料夾分類
+// 對應資料夾設定/定義傳遞標籤，在 firebase 做資料夾分類
 const folderMapping = {
   "member-avatar": "member/avatars", // 會員頭像
   "host-avatar": "host/avatars", // 主辦方頭像
   "host-cover": "host/covers", // 主辦方封面照
+  "event-cover": "event/covers", // 活動封面照
+  "event-detail": "event/details", // 活動詳情照
 };
 
+//上傳圖片主函式
 const uploadImageFile = async (file, imageType) => {
   if (!ALLOWED_FILE_TYPES[file.mimetype]) {
     throw new Error("不支援的檔案類型，僅支援 JPG、PNG 格式");

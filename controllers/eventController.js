@@ -8,6 +8,7 @@ const {
   isNotValidInteger,
 } = require("../utils/validUtils");
 const appError = require("../utils/appError");
+
 const formidable = require("formidable");
 const logger = require("../utils/logger")("Event");
 
@@ -15,30 +16,43 @@ const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 
 const eventController = {
   /**
-   *   * @description 創建活動 (創建活動表單 第一段)
+   * @description [主辦方]建立一筆露營活動
    *
+   * 流程：
+   * 1. 驗證使用者是否已登入（JWT）
+   * 2. 檢查使用者是否為已建立主辦方身份（HostInfo）
+   * 3. 驗證前端送出的必填欄位資料格式
+   * 4. 啟動資料庫交易
+   * 5. 檢查是否已有同名同起始時間的活動（避免重複）
+   * 6. 建立活動記錄並儲存到資料庫
+   * 7. 成功則提交交易，失敗則回滾並回傳錯誤
    */
   async createEvent(req, res, next) {
-    //取得會員id
+    // 從 JWT middleware 解析使用者 ID
     const memberId = req.user.id; // 從 JWT middleware 解析出會員 ID
+
+    //防呆
     if (!memberId) {
       return next(appError(401, "請先登入會員"));
     }
 
     //透過會員的id => 從資料庫查 HostInfo 查member_info_id ＝> 取得主辦方資料
+    // 查詢使用者是否已建立主辦方資料（HostInfo）
     const hostRepo = dataSource.getRepository("HostInfo");
     const host = await hostRepo.findOne({
       where: { member_info_id: memberId },
     });
 
+    //防呆
     if (!host) {
-      return next(appError(404, "尚未建立主辦方資料"));
+      return next(appError(403, "尚未建立主辦方資料"));
     }
 
     //將主辦方id存起來
     const hostId = host.id;
 
     //--------- 存取前端建立一筆露營活動的請求資料 -----------
+    // 從請求中解構前端送來的活動欄位
     const {
       title,
       address,
@@ -74,16 +88,21 @@ const eventController = {
     }
 
     //啟動transaction(交易）
-    //=== 啟動一個資料庫交易，確保整個「建立活動」過程是原子性的（要嘛全部成功，要嘛全部失敗）===
+    //=== 啟動一個資料庫交易，確保整個「建立活動」（要嘛全部成功，要嘛全部失敗）===
     const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
+    //這裡又包一層try catch ==> createEvent() 裡面使用了 TypeORM 的 transaction（交易）機制，而交易需要手動處理 rollback 與 release，不能只靠外部 errorAsync 捕捉錯誤
+    //這裡的try catch 是單就 ==>
+    // 1.在發生錯誤時，先 rollback 資料庫交易 ==>
+    // 2.最後必須無論成功或失敗都 release 資源
     try {
       //
       const eventRepo = queryRunner.manager.getRepository("EventInfo");
 
       //檢查是否已有同樣 title + start_time 的活動
+      // 檢查是否已存在相同主辦方 + 相同標題 + 相同起始時間的活動
       const existEvent = await eventRepo.findOne({
         where: {
           host_info_id: hostId,
@@ -125,28 +144,29 @@ const eventController = {
       //確定剛剛所有操作都成功後，提交整個交易
       await queryRunner.commitTransaction();
 
+      // 回傳成功結果
       return res.status(201).json({
         status: "success",
-        message: "活動建立成功",
+        message: "露營活動建立成功",
         data: {
           event: {
             id: savedEvent.id,
             host_info_id: savedEvent.host_info_id,
             title: savedEvent.title,
-            address: savedEvent.address,
-            description: savedEvent.description,
-            start_time: savedEvent.start_time,
-            end_time: savedEvent.end_time,
-            max_participants: savedEvent.max_participants,
-            cancel_policy: savedEvent.cancel_policy,
-            registration_open_time: savedEvent.registration_open_time || null,
-            registration_close_time: savedEvent.registration_close_time || null,
-            latitude: savedEvent.latitude || null,
-            longitude: savedEvent.longitude || null,
+            // address: savedEvent.address,
+            // description: savedEvent.description,
+            // start_time: savedEvent.start_time,
+            // end_time: savedEvent.end_time,
+            // max_participants: savedEvent.max_participants,
+            // cancel_policy: savedEvent.cancel_policy,
+            // registration_open_time: savedEvent.registration_open_time || null,
+            // registration_close_time: savedEvent.registration_close_time || null,
+            // latitude: savedEvent.latitude || null,
+            // longitude: savedEvent.longitude || null,
             status: savedEvent.status,
             active: savedEvent.active,
-            created_at: savedEvent.created_at,
-            updated_at: savedEvent.updated_at,
+            // created_at: savedEvent.created_at,
+            // updated_at: savedEvent.updated_at,
           },
         },
       });
@@ -158,7 +178,7 @@ const eventController = {
         logger.error("rollbackTransaction 出錯:", rollbackErr);
       }
       logger.error("建立活動失敗:", err);
-      return next(appError(500, "伺服器錯誤，無法建立活動"));
+      return next(appError(500, "伺服器錯誤，請稍後再試"));
     } finally {
       //最後一定要釋放資料庫連線
       await queryRunner.release();
@@ -212,9 +232,7 @@ const eventController = {
   },
 
   /**
-   * ###### =====> 暫時做 <======= 看效果
-   *   * @description 創建活動 (創建活動表單 第二段)
-   *
+   * @description 更新活動的行前提醒與標籤（活動表單第二段）
    */
   async updateNoticesTags(req, res, next) {
     //取得會員id
@@ -229,9 +247,13 @@ const eventController = {
     //// 預設空陣列，避免 undefined
     const { notices = [], tagIds = [] } = req.body;
 
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
     //必須要帶eventId
     if (!eventId) {
-      return next(appError(400, "缺少 eventId"));
+      return next(appError(400, "尚未建立活動"));
     }
 
     const queryRunner = dataSource.createQueryRunner();
@@ -239,24 +261,29 @@ const eventController = {
     await queryRunner.startTransaction();
 
     try {
-      //創建活動typeorm entity物件
+      const hostRepo = queryRunner.manager.getRepository("HostInfo");
       const eventRepo = queryRunner.manager.getRepository("EventInfo");
-      //創建行前提醒 entity物件
       const eventNoticeRepo = queryRunner.manager.getRepository("EventNotice");
-      //創建活動標籤 entity物件
       const eventTagInfoRepo = queryRunner.manager.getRepository("EventTagInfo");
-
       const eventTagRepo = queryRunner.manager.getRepository("EventTag");
 
-      //檢查活動是否存在
+      // 查詢主辦方身份
+      const host = await hostRepo.findOne({ where: { member_info_id: memberId } });
+      if (!host) {
+        await queryRunner.rollbackTransaction();
+        return next(appError(403, "尚未建立主辦方資料"));
+      }
+
+      // 查詢活動是否存在，且是否屬於此主辦方
       const existEvent = await eventRepo.findOne({
-        where: { id: eventId },
+        where: { id: eventId, host_info_id: host.id },
       });
 
       if (!existEvent) {
         await queryRunner.rollbackTransaction();
-        return next(appError(404, "該活動不存在"));
+        return next(appError(403, "權限異常或活動不存在"));
       }
+
       // 先刪除原有行前提醒 刪除舊的 notices
       await eventNoticeRepo.delete({ event_info_id: eventId });
 
@@ -312,12 +339,7 @@ const eventController = {
         },
       });
     } catch (error) {
-      console.error("updateNoticesTags 錯誤：", error); // ⭐ 加這行！！
-      try {
-        await queryRunner.rollbackTransaction();
-      } catch (rollbackErr) {
-        logger.error("rollbackTransaction 出錯", rollbackErr);
-      }
+      await queryRunner.rollbackTransaction();
       logger.error("更新行前提醒與標籤失敗", error);
       return next(appError(500, "伺服器錯誤，請稍後再試"));
     } finally {
@@ -380,154 +402,112 @@ const eventController = {
   },
 
   /**
-   * @description 新增露營活動封面圖片(最多六張)
+   * @description 上傳活動圖片（封面圖或詳情圖）
+   * POST /api/v1/events/:eventId/images?type=cover|detail
    */
   async uploadEventPhotos(req, res, next) {
-    const { eventId } = req.params; // 取得活動 ID
-    const form = formidable.formidable({ multiples: true }); // ⭐️ 支援多檔案
-
-    const [, files] = await form.parse(req); // ⭐️ 先 parse req，才能拿到 files
-
-    const imageFiles = files.file || []; // 取得 files
-    const imageArray = Array.isArray(imageFiles) ? imageFiles : [imageFiles]; // 保證一定是陣列
-
-    if (imageArray.length === 0) {
-      return next(appError(400, "請至少上傳一張圖片"));
+    const memberId = req.user.id; // 從 JWT middleware 解析出會員 ID
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+    const hostRepo = dataSource.getRepository("HostInfo");
+    const eventRepo = dataSource.getRepository("EventInfo");
+    // 查詢使用者對應的主辦方身份
+    const host = await hostRepo.findOne({ where: { member_info_id: memberId } });
+    if (!host) {
+      return next(appError(403, "尚未建立主辦方資料"));
     }
 
-    if (imageArray.length > 6) {
-      return next(appError(400, "最多只能上傳 6 張圖片"));
+    const { eventId } = req.params; // 取得活動 ID
+    if (!eventId) {
+      return next(appError(400, "請提供活動 ID"));
+    }
+
+    // 檢查該活動是否屬於這位主辦方
+    const event = await eventRepo.findOne({
+      where: {
+        id: eventId,
+        host_info_id: host.id,
+      },
+    });
+
+    if (!event) {
+      return next(appError(403, "尚未建立主辦方資料"));
+    }
+
+    const { type } = req.query; // 取得圖片類型（cover 或 detail）
+    if (!["cover", "detail"].includes(type)) {
+      return next(appError(400, "圖片類型錯誤，type 必須是 cover 或 detail"));
     }
 
     const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
+
+    const form = formidable.formidable({ multiples: true, maxFiles: 3 }); //  支援多檔案
+
+    const [fields, files] = await form.parse(req); // 先 parse req，才能拿到 files
+
+    const imageFiles = files.file || []; // 取得 files
+    const descriptions = fields.descriptions || [];
+
+    const imageArray = Array.isArray(imageFiles) ? imageFiles : [imageFiles];
+    const descArray = Array.isArray(descriptions) ? descriptions : [descriptions];
+    if (imageArray.length === 0) {
+      return next(appError(400, "請至少上傳一張圖片"));
+    }
+    // 限制上傳的圖片數量
+    //const limit = type === "cover" ? 3 : 6;
+    const limit = 3; // 封面圖與詳情圖皆限制為 3 張
+    if (imageArray.length > limit) {
+      return next(
+        appError(400, `最多只能上傳 ${limit} 張${type === "cover" ? "封面圖" : "詳情圖"}`)
+      );
+    }
+
+    //這裡做detail description的驗證ß
+    if (type === "detail") {
+      const nonEmptyDescriptions = descArray.filter(
+        (d) => typeof d === "string" && d.trim() !== ""
+      );
+      if (nonEmptyDescriptions.length === 0) {
+        return next(appError(400, "請至少提供一筆詳情圖片描述"));
+      }
+    }
+
     const uploadedPhotos = [];
 
-    for (const imageFile of imageArray) {
-      if (!imageFile) continue;
+    for (let i = 0; i < imageArray.length; i++) {
+      const imageFile = imageArray[i];
+      const description = descArray[i] || null;
 
       if (!ALLOWED_FILE_TYPES[imageFile.mimetype]) {
-        return next(appError(400, "圖片格式錯誤，僅支援 JPG、PNG 格式"));
+        return next(appError(400, "圖片格式錯誤，僅支援 JPG、PNG"));
       }
+      //決定上傳至 Firebase 的哪個目錄
+      const firebaseType = type === "cover" ? "event-cover" : "event-detail";
+      const imageUrl = await uploadImageFile(imageFile, firebaseType);
 
-      const imageUrl = await uploadImageFile(imageFile, "event-photos");
-
-      const newPhoto = eventPhotoRepo.create({
+      const photoRecord = eventPhotoRepo.create({
         event_info_id: eventId,
         photo_url: imageUrl,
-        type: "cover", // 預設是 cover，可以未來 PATCH 調整
+        type,
+        description: type === "detail" ? description : null,
       });
 
-      const savedPhoto = await eventPhotoRepo.save(newPhoto);
+      const saved = await eventPhotoRepo.save(photoRecord);
 
       uploadedPhotos.push({
-        imageId: savedPhoto.id,
-        event_info_id: savedPhoto.event_info_id,
-        imageUrl: savedPhoto.photo_url,
-        type: savedPhoto.type,
+        imageId: saved.id,
+        event_info_id: saved.event_info_id,
+        imageUrl: saved.photo_url,
+        type: saved.type,
+        description: saved.description,
       });
     }
 
     return res.status(201).json({
       status: "success",
-      message: "圖片上傳成功",
+      message: `${type === "cover" ? "封面圖" : "詳情圖"}上傳成功`,
       data: uploadedPhotos,
-    });
-  },
-
-  /**
-   * @description  更新圖片描述
-   * * PATCH /api/v1/events/:eventId/images/:imageId
-   */
-  async updateImageDescription(req, res, next) {
-    const { eventId, imageId } = req.params;
-    const { description } = req.body;
-
-    if (!description) {
-      return next(appError(400, "缺少必要的 description"));
-    }
-
-    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
-
-    const targetPhoto = await eventPhotoRepo.findOne({
-      where: { id: imageId, event_info_id: eventId },
-    });
-
-    if (!targetPhoto) {
-      return next(appError(404, "找不到指定的圖片"));
-    }
-
-    targetPhoto.description = description;
-    await eventPhotoRepo.save(targetPhoto);
-
-    return res.status(200).json({
-      status: "success",
-      message: "圖片描述更新成功",
-      data: {
-        imageId: targetPhoto.id,
-        event_info_id: targetPhoto.event_info_id,
-        description: targetPhoto.description,
-      },
-    });
-  },
-  /**
-   * @description 刪除圖片
-   * DELETE /api/v1/events/:eventId/images/:imageId
-   */
-  async deleteImage(req, res, next) {
-    const { eventId, imageId } = req.params;
-
-    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
-
-    const targetPhoto = await eventPhotoRepo.findOne({
-      where: { id: imageId, event_info_id: eventId },
-    });
-
-    if (!targetPhoto) {
-      return next(appError(404, "找不到指定的圖片"));
-    }
-
-    await eventPhotoRepo.delete({ id: imageId });
-
-    return res.status(200).json({
-      status: "success",
-      message: "圖片刪除成功",
-      data: {
-        imageId: imageId,
-        event_info_id: eventId,
-      },
-    });
-  },
-
-  //設定活動圖片為封面
-  async setCoverImage(req, res, next) {
-    const { eventId, imageId } = req.params;
-    const eventPhotoRepo = dataSource.getRepository("EventInfoPhoto");
-
-    // 先確認這張圖片存在且屬於這個活動
-    const targetPhoto = await eventPhotoRepo.findOne({
-      where: { id: imageId, event_info_id: eventId },
-    });
-
-    if (!targetPhoto) {
-      return next(appError(404, "找不到指定的圖片"));
-    }
-
-    // 把這個活動其他圖片的 type 改成 detail
-    await eventPhotoRepo.update({ event_info_id: eventId, type: "cover" }, { type: "detail" });
-
-    // 把這張圖片設成 cover
-    targetPhoto.type = "cover";
-    await eventPhotoRepo.save(targetPhoto);
-
-    return res.status(200).json({
-      status: "success",
-      message: "封面圖片設定成功",
-      data: {
-        imageId: targetPhoto.id,
-        event_info_id: targetPhoto.event_info_id,
-        photo_url: targetPhoto.photo_url,
-        type: targetPhoto.type,
-      },
     });
   },
 
