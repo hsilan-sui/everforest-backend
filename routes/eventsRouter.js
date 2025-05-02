@@ -346,110 +346,6 @@ router.patch(
 /**
  * @swagger
  * /api/v1/events/{eventId}/images:
- *   get:
- *     summary: 取得指定活動的所有圖片（公開）
- *     tags: [Events]
- *     parameters:
- *       - in: path
- *         name: eventId
- *         required: true
- *         schema:
- *           type: string
- *         description: 活動 ID
- *     responses:
- *       200:
- *         description: 成功取得圖片列表
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 message:
- *                   type: string
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       imageId:
- *                         type: string
- *                       event_info_id:
- *                         type: string
- *                       imageUrl:
- *                         type: string
- *                       description:
- *                         type: string
- *                       type:
- *                         type: string
- *                       created_at:
- *                         type: string
- *                         format: date-time
- *       404:
- *         description: 找不到任何圖片或活動 ID 錯誤
- */
-
-router.get(
-  "/:eventId/images",
-  errorAsync(eventController.getEventPhotos) // ← 查所有圖片
-);
-
-/**
- * @swagger
- * /api/v1/events/{eventId}/images/{imageId}:
- *   get:
- *     summary: 取得單張活動圖片資訊（公開）
- *     tags: [Events]
- *     parameters:
- *       - in: path
- *         name: eventId
- *         required: true
- *         schema:
- *           type: string
- *         description: 活動 ID
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: string
- *         description: 圖片 ID
- *     responses:
- *       200:
- *         description: 成功取得圖片資訊
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     imageId:
- *                       type: string
- *                     event_info_id:
- *                       type: string
- *                     imageUrl:
- *                       type: string
- *                     description:
- *                       type: string
- *                     type:
- *                       type: string
- *                     created_at:
- *                       type: string
- *                       format: date-time
- *       404:
- *         description: 找不到指定的圖片
- */
-router.get("/:eventId/images/:imageId", errorAsync(eventController.getSingleEventPhoto));
-
-/**
- * @swagger
- * /api/v1/events/{eventId}/images:
  *   post:
  *     summary: 上傳活動圖片（封面圖或詳情圖）
  *     description: 需登入並擁有活動主辦權限。可上傳最多 3 張封面圖或詳情圖，僅支援 JPG / PNG 格式。
@@ -600,14 +496,22 @@ router.post(
  *                   properties:
  *                     title:
  *                       type: string
+ *                       description: 方案名稱
+ *                       example: 豪華雙人方案
  *                     price:
  *                       type: number
+ *                       description: 原價
+ *                       example: 2800
  *                     discounted_price:
  *                       type: number
+ *                       description: 折扣價（可省略）
+ *                       example: 2500
  *                     contents:
  *                       type: array
  *                       items:
  *                         type: string
+ *                       description: 方案內容陣列
+ *                       example: ["含早餐", "附贈帳篷"]
  *                     addons:
  *                       type: array
  *                       items:
@@ -615,15 +519,23 @@ router.post(
  *                         properties:
  *                           name:
  *                             type: string
+ *                             description: 加購品名稱
+ *                             example: BBQ 套餐
  *                           price:
  *                             type: number
+ *                             description: 加購品價格
+ *                             example: 399
  *     responses:
  *       201:
- *         description: 活動方案建立成功
+ *         description: 活動方案建立成功，回傳建立的方案資料
  *       400:
- *         description: 缺少活動 ID 或方案資料
+ *         description: 請求錯誤，可能原因：缺少活動 ID、plans 陣列為空、方案超過上限
+ *       403:
+ *         description: 無權限建立此活動方案（非該活動的主辦方）
  *       404:
- *         description: 找不到對應的活動
+ *         description: 找不到對應的活動 ID
+ *       500:
+ *         description: 伺服器內部錯誤（資料庫操作失敗、交易錯誤等）
  */
 // 建立活動方案 活動方案內容 活動加購
 router.post(
