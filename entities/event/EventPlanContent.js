@@ -1,8 +1,8 @@
 const { EntitySchema } = require("typeorm");
 
 module.exports = new EntitySchema({
-  name: "EventInfoPhoto",
-  tableName: "EVENT_INFO_PHOTO",
+  name: "EventPlanContent",
+  tableName: "EVENT_PLAN_CONTENT",
   columns: {
     id: {
       type: "uuid",
@@ -10,24 +10,13 @@ module.exports = new EntitySchema({
       nullable: false,
       generated: "uuid",
     },
-    event_info_id: {
+    event_plan_id: {
       type: "uuid",
       nullable: false,
     },
-    type: {
-      type: "enum",
-      enum: ["cover", "detail"],
-      default: "detail", // 預設就是 detail
-      nullable: false, //一定要有值，不能空
-    },
-    photo_url: {
-      type: "varchar",
-      length: 1024,
-      nullable: false,
-    },
-    description: {
+    content: {
       type: "text",
-      nullable: true,
+      nullable: false,
     },
     created_at: {
       type: "timestamptz",
@@ -37,18 +26,18 @@ module.exports = new EntitySchema({
     updated_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
-      onUpdate: "CURRENT_TIMESTAMP",
+      onUpdate: () => "CURRENT_TIMESTAMP",
       nullable: false,
     },
   },
   relations: {
-    eventBox: {
+    eventPlanBox: {
       type: "many-to-one",
-      target: "EventInfo",
+      target: "EventPlan",
       joinColumn: {
-        name: "event_info_id",
+        name: "event_plan_id",
       },
-      inverseSide: "eventPhotoBox",
+      inverseSide: "eventPlanContentBox",
       onDelete: "CASCADE",
     },
   },
