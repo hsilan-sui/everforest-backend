@@ -42,7 +42,7 @@ module.exports = new EntitySchema({
     },
     cancel_policy: {
       type: "varchar",
-      length: 20,
+      length: 100,
       nullable: false,
     },
     active: {
