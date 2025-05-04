@@ -169,20 +169,6 @@ const authController = {
         },
       },
     });
-    // res.status(200).json({
-    //   status: "success",
-    //   message: "登入成功",
-    //   data: {
-    //     member: {
-    //       id: findMember.id,
-    //       email,
-    //       firstname: findMember.firstname,
-    //       lastname: findMember.lastname,
-    //       role: findMember.role,
-    //     },
-    //     token,
-    //   },
-    // });
   },
   async checkMemberIsLogin(req, res, next) {
     if (!req.user) {
