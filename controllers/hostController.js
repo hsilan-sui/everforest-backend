@@ -1,5 +1,5 @@
 const { dataSource } = require("../db/data-source");
-const { generateAccessJWT } = require("../utils/jwtUtils.js");
+const { generateAccessJWT, generateRefreshJWT } = require("../utils/jwtUtils.js");
 const { isUndefined, isNotValidString } = require("../utils/validUtils");
 const appError = require("../utils/appError");
 const logger = require("../utils/logger")("Host");
@@ -150,14 +150,32 @@ const hostController = {
 
       const newAccessToken = generateAccessJWT({
         id: memberId,
-        role: "host", //可指定角色的權限驗證 middleware（RBAC）
+        username: existMember.username,
+        email: existMember.email,
+        role: "host",
+      });
+
+      const newRefreshToken = generateRefreshJWT({
+        id: memberId,
+        username: existMember.username,
+        email: existMember.email,
+        role: "host",
       });
 
       res.cookie("access_token", newAccessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
+        secure: true,
+        sameSite: "None",
+        maxAge: 1000 * 60 * 15, // 15 分鐘
+        path: "/",
+      });
+
+      res.cookie("refresh_token", newRefreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
+        path: "/",
       });
 
       res.status(201).json({
