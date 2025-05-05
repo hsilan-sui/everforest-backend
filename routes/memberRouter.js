@@ -236,4 +236,12 @@ router.patch("/profile", checkAuth, errorAsync(memberController.updateProfile));
  */
 router.post("/profile/avatar", checkAuth, errorAsync(memberController.editMemberAvatar));
 
+router.get("/orders", checkAuth, errorAsync(memberController.getMemberOrder));
+
+router.post("/orders/:orderId", checkAuth, errorAsync(memberController.postMemberOrder));
+
+router.patch("/orders/:orderId", checkAuth, errorAsync(memberController.patchMemberOrder));
+
+router.delete("/orders/:orderId", checkAuth, errorAsync(memberController.patchMemberOrder));
+
 module.exports = router;

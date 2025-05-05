@@ -100,5 +100,11 @@ module.exports = new EntitySchema({
       target: "EventInfoPhoto",
       inverseSide: "eventBox",
     },
+
+    orderBox: {
+      type: "one-to-one",
+      target: "OrderInfo",
+      inverseSide: "eventBox",
+    },
   },
 });

@@ -1,7 +1,13 @@
 const { dataSource } = require("../db/data-source");
 const appError = require("../utils/appError");
 const logger = require("../utils/logger")("member");
-const { isNotValidString, isValidURL, isValidDate } = require("../utils/validUtils");
+const {
+  isNotValidString,
+  isValidURL,
+  isValidDate,
+  isNotValidUUID,
+  isNotValidInteger,
+} = require("../utils/validUtils");
 const formidable = require("formidable");
 const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 
@@ -128,6 +134,129 @@ const memberController = {
         avatar_url: imageUrl,
       },
     });
+  },
+
+  async getMemberOrder(req, res, next) {
+    const memberID = req.user.id;
+    const orderRepo = dataSource.getRepository("OrderInfo");
+
+    const order = await orderRepo.find({
+      //member_info_id,event_plan_id,order_pay_id,quantity,total_price,book_at,created_at
+
+      where: { member_info_id: memberID },
+      order: { created_at: "DESC" },
+      relations: {
+        eventBox: true,
+      },
+    });
+
+    if (order.length === 0) {
+      logger.warn("找不到會員訂單");
+      return next(appError(400, "找不到會員訂單"));
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "會員訂單取得成功",
+      /*
+      data: {
+        orders:order.map(order =>({
+            id:order.id,
+            member_info_id:order.member_info_id,
+            quantity:'1',
+            total_price:order.total_price,
+            Event:{
+                id:order.event_plan_id,
+                title:order.title,
+            },
+            order_pay:{
+              id:order.order_pay_id,
+              status:order.status,
+            },
+            
+        })),
+        
+      },
+      */
+    });
+  },
+
+  async postMemberOrder(req, res, next) {
+    const memberId = req.user.id; //從middleware取出目前登入的會員uuid
+
+    if (!memberId) {
+      //401-未授權
+      return next(appError(401, "請先登入會員"));
+    }
+    const orderRepo = dataSource.getRepository("OrderInfo");
+    const { event_plan_id, total_price } = req.body;
+
+    //驗證必填欄位
+    if (isNotValidUUID(event_plan_id)) {
+      //400 - 發生錯誤(未寫必填欄位)
+      return next(appError(400, "請選擇方案"));
+    } else if (isNotValidInteger(total_price)) {
+      return next(appError(400, "金額要大於0"));
+    }
+
+    //建立組好要存入Order_Info的一筆主辦方資料物件
+    const newOrder = orderRepo.create({
+      member_info_id: memberId,
+      event_plan_id,
+      quantity: "1",
+      total_price,
+    });
+
+    //將訂單存入資料庫
+    const savedOrder = await orderRepo.save(newOrder);
+    logger.info(`savedOrder ${savedOrder} `);
+  },
+
+  async patchMemberOrder(req, res, next) {
+    const memberId = req.user.id;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    const orderRepo = dataSource.getRepository("OrderInfo");
+
+    try {
+      const { orderid, event_plan_id, total_price } = req.body;
+
+      const existMemberOrder = await orderRepo.findOne({
+        where: {
+          id: orderid,
+        },
+      });
+
+      if (!existMemberOrder) {
+        logger.warn("找不到會員訂單資料");
+        return next(appError(400, "找不到會員訂單資料"));
+      }
+
+      existMemberOrder.event_plan_id = event_plan_id;
+      existMemberOrder.total_price = total_price;
+
+      await orderRepo.save(existMemberOrder);
+
+      return res.status(200).json({
+        status: "success",
+        message: "會員訂單更新成功",
+        data: {
+          order_info: {
+            orderid: existMemberOrder.orderid,
+            event_plan_id: "",
+            quantity: "1",
+            total_price: existMemberOrder.total_price,
+            book_at: existMemberOrder.book_at,
+          },
+        },
+      });
+    } catch (err) {
+      logger.error("會員訂單更新錯誤", err);
+      return next(appError(500, "伺服器錯誤，無法更新會員訂單資料"));
+    }
   },
 };
 
