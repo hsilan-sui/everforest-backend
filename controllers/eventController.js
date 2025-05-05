@@ -1,6 +1,6 @@
 const { dataSource } = require("../db/data-source");
 //const { generateAccessJWT } = require("../utils/jwtUtils.js");
-const { In } = require("typeorm"); // ← 一定要引入！
+const { In, Not } = require("typeorm"); // ← 一定要引入！
 const {
   isUndefined,
   isNotValidString,
@@ -184,6 +184,114 @@ const eventController = {
       await queryRunner.release();
     }
   },
+  /**
+   * @description [主辦方]更新一筆露營活動（部分欄位 PATCH）
+   */
+  async patchEvent(req, res, next) {
+    const memberId = req.user.id;
+    const { eventId } = req.params;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    const hostRepo = dataSource.getRepository("HostInfo");
+    const host = await hostRepo.findOne({
+      where: { member_info_id: memberId },
+    });
+
+    if (!host) {
+      return next(appError(403, "尚未建立主辦方資料"));
+    }
+
+    const hostId = host.id;
+
+    const {
+      title,
+      address,
+      description,
+      start_time,
+      end_time,
+      max_participants,
+      cancel_policy,
+      registration_open_time,
+      registration_close_time,
+      latitude,
+      longitude,
+    } = req.body;
+
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const eventRepo = queryRunner.manager.getRepository("EventInfo");
+
+      const event = await eventRepo.findOne({
+        where: { id: eventId, host_info_id: hostId },
+      });
+
+      if (!event) {
+        await queryRunner.rollbackTransaction();
+        return next(appError(404, "找不到活動"));
+      }
+
+      // 如果有提供 title 和 start_time，才進行重複檢查
+      if (title && start_time) {
+        const duplicateEvent = await eventRepo.findOne({
+          where: {
+            host_info_id: hostId,
+            title,
+            start_time,
+            id: Not(eventId), // 排除自己
+          },
+        });
+        if (duplicateEvent) {
+          await queryRunner.rollbackTransaction();
+          return next(appError(409, "已有同名活動於相同起始時間"));
+        }
+      }
+
+      // 只更新有傳進來的欄位
+      if (title !== undefined) event.title = title;
+      if (address !== undefined) event.address = address;
+      if (description !== undefined) event.description = description;
+      if (start_time !== undefined) event.start_time = start_time;
+      if (end_time !== undefined) event.end_time = end_time;
+      if (max_participants !== undefined) event.max_participants = max_participants;
+      if (cancel_policy !== undefined) event.cancel_policy = cancel_policy;
+      if (registration_open_time !== undefined)
+        event.registration_open_time = registration_open_time;
+      if (registration_close_time !== undefined)
+        event.registration_close_time = registration_close_time;
+      if (latitude !== undefined) event.latitude = latitude;
+      if (longitude !== undefined) event.longitude = longitude;
+
+      const updated = await eventRepo.save(event);
+      if (!updated) throw new Error("活動更新失敗");
+
+      await queryRunner.commitTransaction();
+
+      return res.status(200).json({
+        status: "success",
+        message: "活動更新成功",
+        data: {
+          event: updated,
+        },
+      });
+    } catch (err) {
+      try {
+        await queryRunner.rollbackTransaction();
+      } catch (rollbackErr) {
+        logger.error("rollbackTransaction 出錯:", rollbackErr);
+      }
+      logger.error("patchEvent 更新失敗:", err);
+      return next(appError(500, "伺服器錯誤，請稍後再試"));
+    } finally {
+      await queryRunner.release();
+    }
+  },
+
   /**
    * @description 取得主辦方自己的活動詳情（包含草稿、未上架等）
    */
@@ -831,6 +939,105 @@ const eventController = {
       status: "success",
       message: "取得公開活動詳情成功",
       data: event,
+    });
+  },
+
+  async getEvents(req, res, next) {
+    const { startTime, endTime, location, minPrice, maxPrice, page, per, sort } = req.query;
+
+    // 分頁與排序設定
+    const currentPage = page ? parseInt(page) : 1;
+    const perPage = per ? parseInt(per) : 10;
+    const sortOrder = (sort || "asc").toUpperCase();
+
+    let sortField = "created_at";
+
+    // 如果有 minPrice 或 maxPrice，則排序依據 price
+    if (minPrice || maxPrice) {
+      sortField = "price";
+    }
+
+    // 使用 QueryBuilder 來處理關聯查詢
+    const eventRepo = dataSource.getRepository("EventInfo");
+    const queryBuilder = eventRepo
+      .createQueryBuilder("event")
+      .leftJoinAndSelect("event.eventPlanBox", "eventPlanBox")
+      .where("event.active = :active", { active: "published" });
+
+    // 處理 startTime 和 endTime 篩選
+    if (startTime) {
+      const isStartTimeValid = !isNaN(Date.parse(startTime));
+      if (!isStartTimeValid) {
+        return next(appError(400, "參數格式錯誤，請確認填寫正確"));
+      }
+      queryBuilder.andWhere("event.start_time >= :startTime", { startTime });
+    }
+
+    if (endTime) {
+      const isEndTimeValid = !isNaN(Date.parse(endTime));
+      if (!isEndTimeValid) {
+        return next(appError(400, "參數格式錯誤，請確認填寫正確"));
+      }
+      queryBuilder.andWhere("event.end_time <= :endTime", { endTime });
+    }
+
+    // 處理 location 篩選
+    if (location) {
+      queryBuilder.andWhere("event.address LIKE :location", {
+        location: `%${location}%`,
+      });
+    }
+
+    // 處理 minPrice 和 maxPrice 篩選
+    if (minPrice && !isNaN(parseInt(minPrice))) {
+      const parsedMinPrice = parseInt(minPrice);
+      queryBuilder.andWhere("eventPlanBox.price >= :minPrice AND eventPlanBox.price IS NOT NULL", {
+        minPrice: parsedMinPrice,
+      });
+    }
+
+    if (maxPrice && !isNaN(parseInt(maxPrice))) {
+      const parsedMaxPrice = parseInt(maxPrice);
+      queryBuilder.andWhere("eventPlanBox.price <= :maxPrice AND eventPlanBox.price IS NOT NULL", {
+        maxPrice: parsedMaxPrice,
+      });
+    }
+
+    if (sortField === "price") {
+      queryBuilder.addOrderBy("eventPlanBox.price", sortOrder);
+    } else {
+      queryBuilder.addOrderBy(`event.${sortField}`, sortOrder);
+    }
+
+    // 分頁
+    queryBuilder.skip((currentPage - 1) * perPage).take(perPage);
+
+    // 查詢
+    const [events, total] = await queryBuilder.getManyAndCount();
+
+    // 計算總頁數
+    const totalPages = Math.ceil(total / perPage);
+
+    return res.status(200).json({
+      status: "success",
+      message: "取得活動成功",
+      data: {
+        pagination: {
+          page: currentPage,
+          per: perPage,
+          total: total,
+          total_pages: totalPages,
+          ...(events.length > 0 && { sort: sortField }), // 如果有活動資料，才顯示 sort
+        },
+        events: events.map((event) => ({
+          id: event.id,
+          title: event.title,
+          start_time: event.start_time,
+          end_time: event.end_time,
+          address: event ? event.address : "",
+          price: event.eventPlanBox.length > 0 ? event.eventPlanBox[0].price.toString() : "",
+        })),
+      },
     });
   },
 };

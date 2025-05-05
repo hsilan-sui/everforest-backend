@@ -33,15 +33,21 @@ const authController = {
     }
 
     const memberRepo = dataSource.getRepository("MemberInfo");
-    const existMember = await memberRepo.findOne({
-      where: [{ email }, { username }],
+    const existMember = await memberRepo.find({
+      where: [{ email }, { username }, { phone }],
     });
 
-    if (existMember) {
-      if (existMember.email === email) {
-        return next(appError(409, "Email 已被使用"));
-      } else if (existMember.username === username) {
-        return next(appError(409, "username 已被使用"));
+    if (existMember.length > 0) {
+      for (const member of existMember) {
+        if (member.email === email) {
+          return next(appError(409, "Email 已被使用"));
+        }
+        if (member.phone === phone) {
+          return next(appError(409, "手機號碼已被使用"));
+        }
+        if (member.username === username) {
+          return next(appError(409, "Username 已被使用"));
+        }
       }
     }
     // 密碼加密
