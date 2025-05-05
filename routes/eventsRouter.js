@@ -185,6 +185,8 @@ const eventController = require("../controllers/eventController");
 
 router.post("/", checkAuth, restrictTo("host"), errorAsync(eventController.createEvent));
 
+router.patch("/:eventId", checkAuth, restrictTo("host"), errorAsync(eventController.patchEvent));
+
 /**
  * @swagger
  * /api/v1/events/{eventId}/host:

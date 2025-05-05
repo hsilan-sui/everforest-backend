@@ -8,8 +8,9 @@ WORKDIR /app
 # 複製 package 檔案並安裝依賴(提高快取命中率)
 COPY package*.json ./
 
+ENV HUSKY=0
 # 安裝 npm 套件
-RUN npm ci
+RUN npm install
 
 # 安裝 hot reload 工具
 #RUN npm install nodemon
