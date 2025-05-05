@@ -43,7 +43,7 @@ module.exports = new EntitySchema({
     cancel_policy: {
       type: "varchar",
       length: 120,
-      nullable: true,
+      nullable: false,
     },
     active: {
       type: "enum",
