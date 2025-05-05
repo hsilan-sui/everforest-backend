@@ -1,6 +1,6 @@
 const { dataSource } = require("../db/data-source");
 //const { generateAccessJWT } = require("../utils/jwtUtils.js");
-const { In } = require("typeorm"); // ← 一定要引入！
+const { In, Not } = require("typeorm"); // ← 一定要引入！
 const {
   isUndefined,
   isNotValidString,
@@ -184,6 +184,114 @@ const eventController = {
       await queryRunner.release();
     }
   },
+  /**
+   * @description [主辦方]更新一筆露營活動（部分欄位 PATCH）
+   */
+  async patchEvent(req, res, next) {
+    const memberId = req.user.id;
+    const { eventId } = req.params;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    const hostRepo = dataSource.getRepository("HostInfo");
+    const host = await hostRepo.findOne({
+      where: { member_info_id: memberId },
+    });
+
+    if (!host) {
+      return next(appError(403, "尚未建立主辦方資料"));
+    }
+
+    const hostId = host.id;
+
+    const {
+      title,
+      address,
+      description,
+      start_time,
+      end_time,
+      max_participants,
+      cancel_policy,
+      registration_open_time,
+      registration_close_time,
+      latitude,
+      longitude,
+    } = req.body;
+
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const eventRepo = queryRunner.manager.getRepository("EventInfo");
+
+      const event = await eventRepo.findOne({
+        where: { id: eventId, host_info_id: hostId },
+      });
+
+      if (!event) {
+        await queryRunner.rollbackTransaction();
+        return next(appError(404, "找不到活動"));
+      }
+
+      // 如果有提供 title 和 start_time，才進行重複檢查
+      if (title && start_time) {
+        const duplicateEvent = await eventRepo.findOne({
+          where: {
+            host_info_id: hostId,
+            title,
+            start_time,
+            id: Not(eventId), // 排除自己
+          },
+        });
+        if (duplicateEvent) {
+          await queryRunner.rollbackTransaction();
+          return next(appError(409, "已有同名活動於相同起始時間"));
+        }
+      }
+
+      // 只更新有傳進來的欄位
+      if (title !== undefined) event.title = title;
+      if (address !== undefined) event.address = address;
+      if (description !== undefined) event.description = description;
+      if (start_time !== undefined) event.start_time = start_time;
+      if (end_time !== undefined) event.end_time = end_time;
+      if (max_participants !== undefined) event.max_participants = max_participants;
+      if (cancel_policy !== undefined) event.cancel_policy = cancel_policy;
+      if (registration_open_time !== undefined)
+        event.registration_open_time = registration_open_time;
+      if (registration_close_time !== undefined)
+        event.registration_close_time = registration_close_time;
+      if (latitude !== undefined) event.latitude = latitude;
+      if (longitude !== undefined) event.longitude = longitude;
+
+      const updated = await eventRepo.save(event);
+      if (!updated) throw new Error("活動更新失敗");
+
+      await queryRunner.commitTransaction();
+
+      return res.status(200).json({
+        status: "success",
+        message: "活動更新成功",
+        data: {
+          event: updated,
+        },
+      });
+    } catch (err) {
+      try {
+        await queryRunner.rollbackTransaction();
+      } catch (rollbackErr) {
+        logger.error("rollbackTransaction 出錯:", rollbackErr);
+      }
+      logger.error("patchEvent 更新失敗:", err);
+      return next(appError(500, "伺服器錯誤，請稍後再試"));
+    } finally {
+      await queryRunner.release();
+    }
+  },
+
   /**
    * @description 取得主辦方自己的活動詳情（包含草稿、未上架等）
    */
