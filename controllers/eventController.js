@@ -321,6 +321,8 @@ const eventController = {
           "eventPhotoBox",
           "eventNoticeBox",
           "eventPlanBox",
+          "eventTagInfoBox",
+          "eventTagInfoBox.eventTagsBox",
           "eventPlanBox.eventPlanContentBox",
           "eventPlanBox.eventPlanAddonBox",
           "eventCommentBox",
@@ -329,10 +331,36 @@ const eventController = {
 
       if (!event) return next(appError(404, "找不到該活動"));
 
+      //這裡來做資料命名簡潔 讓前端一目了然
+      const {
+        hostBox,
+        eventPhotoBox,
+        eventNoticeBox,
+        eventPlanBox,
+        eventTagInfoBox,
+        eventCommentBox,
+        ...rest
+      } = event;
+
+      const formattedEvent = {
+        ...rest,
+        host: hostBox,
+        photos: eventPhotoBox,
+        notices: eventNoticeBox,
+        plans: eventPlanBox,
+        tags: eventTagInfoBox.map((tagInfo) => ({
+          id: tagInfo.eventTagsBox.id,
+          name: tagInfo.eventTagsBox.name,
+          description: tagInfo.eventTagsBox.description,
+          level: tagInfo.eventTagsBox.level,
+        })),
+        comments: eventCommentBox,
+      };
+
       return res.status(200).json({
         status: "success",
         message: "取得主辦活動詳情成功",
-        data: event,
+        data: formattedEvent,
       });
     } catch (err) {
       next(err);
