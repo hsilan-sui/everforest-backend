@@ -943,8 +943,7 @@ const eventController = {
   },
 
   async getEvents(req, res, next) {
-    const { startTime, endTime, location, minPrice, maxPrice, page, per, sort } = req.query;
-
+    const { startTime, endTime, location, minPrice, maxPrice, people, page, per, sort } = req.query;
     // 分頁與排序設定
     const currentPage = page ? parseInt(page) : 1;
     const perPage = per ? parseInt(per) : 10;
@@ -979,6 +978,14 @@ const eventController = {
         return next(appError(400, "參數格式錯誤，請確認填寫正確"));
       }
       queryBuilder.andWhere("event.end_time <= :endTime", { endTime });
+    }
+
+    // 處理人數篩選
+    if (people && !isNaN(parseInt(people))) {
+      const parsedPeople = parseInt(people);
+      queryBuilder.andWhere("eventPlanBox.title LIKE :peopleText", {
+        peopleText: `%${parsedPeople}人%`,
+      });
     }
 
     // 處理 location 篩選
