@@ -31,4 +31,12 @@ module.exports = new EntitySchema({
       nullable: false,
     },
   },
+  relations: {
+    eventTagInfoBox: {
+      type: "one-to-many",
+      target: "EventTagInfo",
+      inverseSide: "eventTagsBox",
+      cascade: true,
+    },
+  },
 });
