@@ -1,4 +1,7 @@
 const ecpay_payment = require("ecpay_aio_nodejs");
+const { dataSource } = require("../db/data-source");
+const dayjs = require("dayjs");
+const { appError } = require("../utils/appError");
 require("dotenv").config();
 
 const options = {
@@ -12,22 +15,27 @@ const options = {
   IsProjectContractor: false,
 };
 const orderController = {
-  async postPayment(req, res) {
-    // const orderId = req.params.orderId;
-    // 假設從資料庫撈取訂單資料
-    // const order = await Order.findById(orderId); // 假設您的訂單模型名稱為 Order
-    // if (!order) {
-    //     return next(appError(400, "訂單未找到"));
-    // }
+  async postPayment(req, res, next) {
+    const orderId = req.params.orderId;
+    const orderRepo = dataSource.getRepository("OrderInfo");
+    const order = await orderRepo.findOne({
+      where: {
+        id: orderId,
+      },
+      relations: ["eventPlan"],
+    });
+    if (!order) {
+      return next(appError(404, "訂單未找到"));
+    }
 
     let base_param = {
-      MerchantTradeNo: "ORDER20250415200001", //請帶20碼uid, ex: f0a0d7e9fae1bb72bc93
-      MerchantTradeDate: "2025/04/15 20:30:00",
-      TotalAmount: "100",
-      TradeDesc: "測試交易描述",
-      ItemName: "測試商品等",
-      ReturnURL: `${process.env.HOST}/api/v1/member/orders/ORDER20250415200001/payment-callback`,
-      ClientBackURL: `${process.env.HOST}`,
+      MerchantTradeNo: order.merchantTradeNo,
+      MerchantTradeDate: dayjs(order.created_at).format("YYYY/MM/DD HH:mm:ss"),
+      TotalAmount: order.total_price,
+      TradeDesc: "訂單付款",
+      ItemName: order.eventPlan.title,
+      ReturnURL: `${process.env.DB_HOST}/api/v1/member/orders/${order.id}/payment-callback`,
+      ClientBackURL: `${process.env.DB_HOST}`,
     };
     const create = new ecpay_payment(options);
 
@@ -40,41 +48,63 @@ const orderController = {
   async postPaymentCallback(req, res) {
     const { CheckMacValue } = req.body;
     const data = { ...req.body };
-    delete data.CheckMacValue; // 此段不驗證
+    delete data.CheckMacValue;
 
     const create = new ecpay_payment(options);
     const checkValue = create.payment_client.helper.gen_chk_mac_value(data);
 
-    // console.log(
-    //     '確認交易正確性：',
-    //     CheckMacValue === checkValue,
-    //     CheckMacValue,
-    //     checkValue,
-    // );
-
-    if (CheckMacValue === checkValue) {
-      // 交易成功後，需要回傳 1|OK 給綠界
-      res.send("1|OK");
-    } else {
-      res.send("0|ERROR");
+    if (CheckMacValue !== checkValue) {
+      return res.send("0|ERROR");
     }
+
+    // 1. 取得訂單
+    const orderRepo = dataSource.getRepository("OrderInfo");
+    const orderPayRepo = dataSource.getRepository("OrderPay");
+    const order = await orderRepo.findOne({
+      where: {
+        merchantTradeNo: data.MerchantTradeNo,
+      },
+    });
+
+    if (!order) {
+      return res.send("0|ERROR");
+    }
+
+    // 2. 建立付款資料
+    await orderPayRepo.create({
+      order_info_id: order.id,
+      method: data.PaymentType,
+      gateway: "ecpay",
+      status: "已付款",
+      amount: data.TradeAmt,
+      transaction_id: data.TradeNo,
+      paid_at: new Date(data.PaymentDate),
+    });
+
+    // 3. 如果訂單成功付款，則更新訂單狀態
+    if (data.RtnCode === "1") {
+      order.status = "已付款";
+      await order.save();
+    }
+
+    res.send("1|OK");
   },
-  async getPaymentCallback(req, res) {
-    res.send(`
-            <html>
-              <head>
-                <meta charset="utf-8" />
-                <title>付款成功</title>
-                <script>
-                  window.location.href = "${process.env.HOST}"; 
-                </script>
-              </head>
-              <body>
-                <p>訂單編號：ORDER20250415200001</p>
-              </body>
-            </html>
-        `);
-  },
+  // async getPaymentCallback(req, res) {
+  //   res.send(`
+  //           <html>
+  //             <head>
+  //               <meta charset="utf-8" />
+  //               <title>付款成功</title>
+  //               <script>
+  //                 window.location.href = "${process.env.HOST}";
+  //               </script>
+  //             </head>
+  //             <body>
+  //               <p>訂單編號：ORDER20250415200001</p>
+  //             </body>
+  //           </html>
+  //       `);
+  // },
 };
 
 module.exports = orderController;

@@ -7,6 +7,6 @@ const orderController = require("../controllers/orderController");
 
 router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayment));
 router.post("/:orderId/payment-callback", errorAsync(orderController.postPaymentCallback));
-router.get("/:orderId/payment-callback", errorAsync(orderController.getPaymentCallback));
+// router.get("/:orderId/payment-callback", errorAsync(orderController.getPaymentCallback));
 
 module.exports = router;
