@@ -1,6 +1,7 @@
 const ecpay_payment = require("ecpay_aio_nodejs");
 const { dataSource } = require("../db/data-source");
 const dayjs = require("dayjs");
+const { isUndefined, isNotValidString, isNotValidInteger } = require("../utils/validUtils");
 const { appError } = require("../utils/appError");
 require("dotenv").config();
 
@@ -24,8 +25,20 @@ const orderController = {
       },
       relations: ["eventPlan"],
     });
+
     if (!order) {
       return next(appError(404, "訂單未找到"));
+    }
+
+    if (
+      isUndefined(order.merchantTradeNo) ||
+      isNotValidString(order.merchantTradeNo) ||
+      isUndefined(order.total_price) ||
+      isNotValidInteger(order.total_price) ||
+      isUndefined(order.eventPlan.title) ||
+      isNotValidString(order.eventPlan.title)
+    ) {
+      return next(appError(400, "欄位未填寫正確"));
     }
 
     let base_param = {
@@ -53,10 +66,6 @@ const orderController = {
     const create = new ecpay_payment(options);
     const checkValue = create.payment_client.helper.gen_chk_mac_value(data);
 
-    if (CheckMacValue !== checkValue) {
-      return res.send("0|ERROR");
-    }
-
     // 1. 取得訂單
     const orderRepo = dataSource.getRepository("OrderInfo");
     const orderPayRepo = dataSource.getRepository("OrderPay");
@@ -66,45 +75,26 @@ const orderController = {
       },
     });
 
-    if (!order) {
-      return res.send("0|ERROR");
-    }
+    console.warn("確認交易正確性：", CheckMacValue === checkValue, CheckMacValue, checkValue);
 
     // 2. 建立付款資料
-    await orderPayRepo.create({
+    await orderPayRepo.save({
       order_info_id: order.id,
       method: data.PaymentType,
       gateway: "ecpay",
-      status: "已付款",
       amount: data.TradeAmt,
       transaction_id: data.TradeNo,
       paid_at: new Date(data.PaymentDate),
     });
 
     // 3. 如果訂單成功付款，則更新訂單狀態
-    if (data.RtnCode === "1") {
+    if (String(data.RtnCode) === "1") {
       order.status = "已付款";
-      await order.save();
+      await orderRepo.save(order);
     }
 
     res.send("1|OK");
   },
-  // async getPaymentCallback(req, res) {
-  //   res.send(`
-  //           <html>
-  //             <head>
-  //               <meta charset="utf-8" />
-  //               <title>付款成功</title>
-  //               <script>
-  //                 window.location.href = "${process.env.HOST}";
-  //               </script>
-  //             </head>
-  //             <body>
-  //               <p>訂單編號：ORDER20250415200001</p>
-  //             </body>
-  //           </html>
-  //       `);
-  // },
 };
 
 module.exports = orderController;
