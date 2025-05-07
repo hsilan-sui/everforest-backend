@@ -402,4 +402,7 @@ router.post("/logout", errorAsync(authController.postMemberLogout));
  */
 router.put("/reset-password", checkAuth, errorAsync(authController.resetPassword));
 
+//忘記密碼
+router.post("/forgot-password", errorAsync(authController.forgotPassword));
+
 module.exports = router;
