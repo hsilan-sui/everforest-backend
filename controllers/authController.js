@@ -33,15 +33,21 @@ const authController = {
     }
 
     const memberRepo = dataSource.getRepository("MemberInfo");
-    const existMember = await memberRepo.findOne({
-      where: [{ email }, { username }],
+    const existMember = await memberRepo.find({
+      where: [{ email }, { username }, { phone }],
     });
 
-    if (existMember) {
-      if (existMember.email === email) {
-        return next(appError(409, "Email 已被使用"));
-      } else if (existMember.username === username) {
-        return next(appError(409, "username 已被使用"));
+    if (existMember.length > 0) {
+      for (const member of existMember) {
+        if (member.email === email) {
+          return next(appError(409, "Email 已被使用"));
+        }
+        if (member.phone === phone) {
+          return next(appError(409, "手機號碼已被使用"));
+        }
+        if (member.username === username) {
+          return next(appError(409, "Username 已被使用"));
+        }
       }
     }
     // 密碼加密
@@ -169,20 +175,6 @@ const authController = {
         },
       },
     });
-    // res.status(200).json({
-    //   status: "success",
-    //   message: "登入成功",
-    //   data: {
-    //     member: {
-    //       id: findMember.id,
-    //       email,
-    //       firstname: findMember.firstname,
-    //       lastname: findMember.lastname,
-    //       role: findMember.role,
-    //     },
-    //     token,
-    //   },
-    // });
   },
   async checkMemberIsLogin(req, res, next) {
     if (!req.user) {
@@ -258,6 +250,36 @@ const authController = {
       status: "success",
       message: "已成功登出",
       data: null,
+    });
+  },
+  async resetPassword(req, res, next) {
+    const { newPassword } = req.body;
+
+    if (!isValidPassword(newPassword)) {
+      return next(appError(400, "密碼不符合規則，需要包含英文數字大小寫，最短8個字，最長16個字"));
+    }
+
+    const memberId = req.user.id;
+    const memberRepo = dataSource.getRepository("MemberInfo");
+    const existMember = await memberRepo.findOne({
+      where: {
+        id: memberId,
+      },
+      select: ["id", "password"],
+    });
+
+    if (existMember) {
+      const isSame = await bcrypt.compare(newPassword, existMember.password);
+      if (!isSame) {
+        // 密碼不同，才更新
+        const hashPassword = await bcrypt.hash(newPassword, 10);
+        existMember.password = hashPassword;
+        await memberRepo.save(existMember);
+      }
+    }
+    return res.status(200).json({
+      status: "success",
+      message: "密碼已成功重設",
     });
   },
 };

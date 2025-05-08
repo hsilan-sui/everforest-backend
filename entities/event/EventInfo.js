@@ -42,7 +42,7 @@ module.exports = new EntitySchema({
     },
     cancel_policy: {
       type: "varchar",
-      length: 20,
+      length: 120,
       nullable: false,
     },
     active: {
@@ -104,6 +104,12 @@ module.exports = new EntitySchema({
       type: "one-to-many",
       target: "EventNotice",
       inverseSide: "eventBox",
+    },
+    eventTagInfoBox: {
+      type: "one-to-many",
+      target: "EventTagInfo", // 中介實體
+      inverseSide: "eventBox",
+      cascade: true,
     },
     eventPlanBox: {
       type: "one-to-many",

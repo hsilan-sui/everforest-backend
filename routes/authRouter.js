@@ -346,4 +346,60 @@ router.post("/refresh", errorAsync(authController.refreshMemberToken));
  */
 router.post("/logout", errorAsync(authController.postMemberLogout));
 
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   put:
+ *     summary: 重設密碼（需登入）
+ *     tags: [Auth 會員認證]
+ *     description: 已登入會員透過此 API 重設密碼。前端應負責確認 newPassword 與 confirmPassword 是否一致。
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 description: 新密碼（需符合密碼規則）
+ *                 example: Abc123456
+ *     responses:
+ *       200:
+ *         description: 密碼已成功重設
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 密碼已成功重設
+ *       400:
+ *         description: 請求錯誤（如密碼格式錯誤）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 密碼不符合規則，需要包含英文數字大小寫，最短8個字，最長16個字
+ *       401:
+ *         description: 尚未登入或驗證失敗
+ *       500:
+ *         description: 伺服器錯誤
+ */
+router.put("/reset-password", checkAuth, errorAsync(authController.resetPassword));
+
 module.exports = router;

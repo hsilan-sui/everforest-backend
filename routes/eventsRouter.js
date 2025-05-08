@@ -185,6 +185,8 @@ const eventController = require("../controllers/eventController");
 
 router.post("/", checkAuth, restrictTo("host"), errorAsync(eventController.createEvent));
 
+router.patch("/:eventId", checkAuth, restrictTo("host"), errorAsync(eventController.patchEvent));
+
 /**
  * @swagger
  * /api/v1/events/{eventId}/host:
@@ -763,5 +765,123 @@ router.patch(
 
 // 新增公開取得活動詳情的 route（無需驗證）
 router.get("/:eventId", errorAsync(eventController.getPublicEvent));
+
+/**
+ * @swagger
+ * /api/v1/events:
+ *   get:
+ *     summary: 取得公開活動列表（支援篩選與分頁）
+ *     tags: [Events]
+ *     parameters:
+ *       - in: query
+ *         name: startTime
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: 活動開始時間（ISO 格式）
+ *       - in: query
+ *         name: endTime
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: 活動結束時間（ISO 格式）
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *         description: 活動地點關鍵字（模糊搜尋）
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: integer
+ *         description: 最低價格
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: integer
+ *         description: 最高價格
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: 當前頁碼（預設為 1）
+ *       - in: query
+ *         name: per
+ *         schema:
+ *           type: integer
+ *         description: 每頁筆數（預設為 10）
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: 排序方式（asc 或 desc）
+ *     responses:
+ *       200:
+ *         description: 成功取得活動列表
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 取得活動成功
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         per:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         total_pages:
+ *                           type: integer
+ *                         sort:
+ *                           type: string
+ *                           example: asc
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           start_time:
+ *                             type: string
+ *                             format: date-time
+ *                           end_time:
+ *                             type: string
+ *                             format: date-time
+ *                           address:
+ *                             type: string
+ *                           price:
+ *                             type: string
+ *       400:
+ *         description: 參數格式錯誤
+ *       500:
+ *         description: 伺服器錯誤，請稍後再試
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤，請稍後再試
+ */
+router.get("/", errorAsync(eventController.getEvents));
 
 module.exports = router;
