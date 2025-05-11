@@ -23,7 +23,7 @@ module.exports = new EntitySchema({
       onDelete: "CASCADE",
     },
     eventTagBox: {
-      type: "many-to-one",
+      type: "many-to-many",
       target: "EventTag",
       joinColumn: {
         name: "event_tag_id",

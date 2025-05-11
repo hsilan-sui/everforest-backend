@@ -59,5 +59,11 @@ module.exports = new EntitySchema({
       target: "EventPlanContent",
       inverseSide: "eventPlanBox",
     },
+
+    orderBox: {
+      type: "many-to-one",
+      target: "OrderInfo",
+      mappedBy: "eventPlanBox", // 對應 OrderInfo 的 eventPlanBox
+    },
   },
 });

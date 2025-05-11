@@ -122,5 +122,11 @@ module.exports = new EntitySchema({
       inverseSide: "memberBox", // 與target:EventComment 中relations關聯變數 `memberBox` 對應
       cascade: true,
     },
+
+    orderBox: {
+      type: "one-to-many",
+      target: "OrderInfo",
+      mappedBy: "memberBox", // 對應 OrderInfo 的 memberBox
+    },
   },
 });
