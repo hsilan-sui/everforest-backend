@@ -1020,6 +1020,16 @@ const eventController = {
     const queryBuilder = eventRepo
       .createQueryBuilder("event")
       .leftJoinAndSelect("event.eventPlanBox", "eventPlanBox")
+      .leftJoinAndSelect(
+        "event.eventPhotoBox",
+        "eventPhotoBox",
+        "eventPhotoBox.type = :photoType",
+        {
+          photoType: "cover",
+        }
+      )
+      .leftJoinAndSelect("event.eventTagInfoBox", "eventTagInfoBox")
+      .leftJoinAndSelect("eventTagInfoBox.eventTagsBox", "eventTagsBox")
       .where("event.active = :active", { active: "published" });
 
     // 處理 startTime 和 endTime 篩選
@@ -1102,6 +1112,8 @@ const eventController = {
           end_time: event.end_time,
           address: event ? event.address : "",
           price: event.eventPlanBox.length > 0 ? event.eventPlanBox[0].price.toString() : "",
+          photos: event.eventPhotoBox?.map((photo) => photo.photo_url) || [],
+          tags: event.eventTagInfoBox?.map((tagInfo) => tagInfo.eventTagsBox?.name) || [],
         })),
       },
     });

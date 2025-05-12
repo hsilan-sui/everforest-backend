@@ -11,13 +11,13 @@ const memberRouter = require("./routes/memberRouter");
 const hostRouter = require("./routes/hostRouter");
 const eventsRouter = require("./routes/eventsRouter");
 const metaRouter = require("./routes/metaRouter");
+const orderRouter = require("./routes/orderRouter");
 
 const cookieParser = require("cookie-parser");
 const setupSwagger = require("./swagger");
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
-
 
 if (process.env.NODE_ENV !== "production") {
   dotenv.config({
@@ -68,7 +68,6 @@ app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
 
-
 // /api/v1/auth (登入註冊)
 app.use("/api/v1/auth", authRouter);
 
@@ -83,6 +82,8 @@ app.use("/api/v1/events", eventsRouter);
 
 // /api/v1/meta (==>跟 EventTag（活動標籤主表）路由也對應api)
 app.use("/api/v1/meta", metaRouter);
+
+app.use("/api/v1/member/orders", orderRouter);
 
 //*** 第 5 階段：健康檢查 ***
 app.get("/healthcheck", (req, res) => {
