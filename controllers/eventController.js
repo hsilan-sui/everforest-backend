@@ -321,6 +321,8 @@ const eventController = {
           "eventPhotoBox",
           "eventNoticeBox",
           "eventPlanBox",
+          "eventTagInfoBox",
+          "eventTagInfoBox.eventTagsBox",
           "eventPlanBox.eventPlanContentBox",
           "eventPlanBox.eventPlanAddonBox",
           "eventCommentBox",
@@ -329,10 +331,36 @@ const eventController = {
 
       if (!event) return next(appError(404, "找不到該活動"));
 
+      //這裡來做資料命名簡潔 讓前端一目了然
+      const {
+        hostBox,
+        eventPhotoBox,
+        eventNoticeBox,
+        eventPlanBox,
+        eventTagInfoBox,
+        eventCommentBox,
+        ...rest
+      } = event;
+
+      const formattedEvent = {
+        ...rest,
+        host: hostBox,
+        photos: eventPhotoBox,
+        notices: eventNoticeBox,
+        plans: eventPlanBox,
+        tags: eventTagInfoBox.map((tagInfo) => ({
+          id: tagInfo.eventTagsBox.id,
+          name: tagInfo.eventTagsBox.name,
+          description: tagInfo.eventTagsBox.description,
+          level: tagInfo.eventTagsBox.level,
+        })),
+        comments: eventCommentBox,
+      };
+
       return res.status(200).json({
         status: "success",
         message: "取得主辦活動詳情成功",
-        data: event,
+        data: formattedEvent,
       });
     } catch (err) {
       next(err);
@@ -888,6 +916,11 @@ const eventController = {
       return next(appError(403, "尚未建立主辦方資料"));
     }
 
+    // 新增這段，已上架則拒絕重複上架
+    if (event.active === "published") {
+      return next(appError(400, "該活動已經上架"));
+    }
+
     if (event.active !== "draft") {
       return next(appError(400, "先建議草稿活動與詳細資訊，才能上架"));
     }
@@ -928,23 +961,48 @@ const eventController = {
         "eventPlanBox.eventPlanContentBox",
         "eventPlanBox.eventPlanAddonBox",
         "eventCommentBox",
+        "eventTagInfoBox",
+        "eventTagInfoBox.eventTagsBox",
       ],
     });
 
     if (!event) {
       return next(appError(404, "活動不存在或尚未上架"));
     }
+    const {
+      hostBox,
+      eventPhotoBox,
+      eventNoticeBox,
+      eventPlanBox,
+      eventTagInfoBox,
+      eventCommentBox,
+      ...rest
+    } = event;
+
+    const formattedEvent = {
+      ...rest,
+      host: hostBox,
+      photos: eventPhotoBox,
+      notices: eventNoticeBox,
+      plans: eventPlanBox,
+      tags: eventTagInfoBox.map((tagInfo) => ({
+        id: tagInfo.eventTagsBox.id,
+        name: tagInfo.eventTagsBox.name,
+        description: tagInfo.eventTagsBox.description,
+        level: tagInfo.eventTagsBox.level,
+      })),
+      comments: eventCommentBox,
+    };
 
     return res.status(200).json({
       status: "success",
       message: "取得公開活動詳情成功",
-      data: event,
+      data: formattedEvent,
     });
   },
 
   async getEvents(req, res, next) {
-    const { startTime, endTime, location, minPrice, maxPrice, page, per, sort } = req.query;
-
+    const { startTime, endTime, location, minPrice, maxPrice, people, page, per, sort } = req.query;
     // 分頁與排序設定
     const currentPage = page ? parseInt(page) : 1;
     const perPage = per ? parseInt(per) : 10;
@@ -962,6 +1020,16 @@ const eventController = {
     const queryBuilder = eventRepo
       .createQueryBuilder("event")
       .leftJoinAndSelect("event.eventPlanBox", "eventPlanBox")
+      .leftJoinAndSelect(
+        "event.eventPhotoBox",
+        "eventPhotoBox",
+        "eventPhotoBox.type = :photoType",
+        {
+          photoType: "cover",
+        }
+      )
+      .leftJoinAndSelect("event.eventTagInfoBox", "eventTagInfoBox")
+      .leftJoinAndSelect("eventTagInfoBox.eventTagsBox", "eventTagsBox")
       .where("event.active = :active", { active: "published" });
 
     // 處理 startTime 和 endTime 篩選
@@ -979,6 +1047,14 @@ const eventController = {
         return next(appError(400, "參數格式錯誤，請確認填寫正確"));
       }
       queryBuilder.andWhere("event.end_time <= :endTime", { endTime });
+    }
+
+    // 處理人數篩選
+    if (people && !isNaN(parseInt(people))) {
+      const parsedPeople = parseInt(people);
+      queryBuilder.andWhere("eventPlanBox.title LIKE :peopleText", {
+        peopleText: `%${parsedPeople}人%`,
+      });
     }
 
     // 處理 location 篩選
@@ -1036,6 +1112,8 @@ const eventController = {
           end_time: event.end_time,
           address: event ? event.address : "",
           price: event.eventPlanBox.length > 0 ? event.eventPlanBox[0].price.toString() : "",
+          photos: event.eventPhotoBox?.map((photo) => photo.photo_url) || [],
+          tags: event.eventTagInfoBox?.map((tagInfo) => tagInfo.eventTagsBox?.name) || [],
         })),
       },
     });

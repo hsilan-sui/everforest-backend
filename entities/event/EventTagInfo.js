@@ -20,14 +20,16 @@ module.exports = new EntitySchema({
       joinColumn: {
         name: "event_info_id",
       },
+      inverseSide: "eventTagInfoBox",
       onDelete: "CASCADE",
     },
-    eventTagBox: {
-      type: "many-to-many",
+    eventTagsBox: {
+      type: "many-to-one",
       target: "EventTag",
       joinColumn: {
         name: "event_tag_id",
       },
+      inverseSide: "eventTagInfoBox",
       onDelete: "CASCADE",
     },
   },

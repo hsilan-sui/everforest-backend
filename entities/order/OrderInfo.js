@@ -10,6 +10,7 @@ module.exports = new EntitySchema({
       nullable: false,
       generated: "uuid",
     },
+
     member_info_id: {
       type: "uuid",
       nullable: false,
@@ -31,6 +32,20 @@ module.exports = new EntitySchema({
     },
     total_price: {
       type: "integer",
+      
+    merchantTradeNo: {
+      type: "varchar",
+      length: 20,
+      unique: true,
+      nullable: true,
+    },
+      
+    quantity: {
+      type: "int",
+      default: 1,
+    },
+    total_price: {
+      type: "int",
       nullable: false,
     },
     cancelled_at: {
@@ -42,6 +57,7 @@ module.exports = new EntitySchema({
       nullable: true,
     },
 
+
     event_addons: {
       type: "jsonb",
       nullable: true,
@@ -51,6 +67,8 @@ module.exports = new EntitySchema({
     book_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
+    book_at: {
+      type: "timestamptz",
       nullable: false,
     },
     created_at: {
@@ -58,9 +76,9 @@ module.exports = new EntitySchema({
       default: () => "CURRENT_TIMESTAMP",
       nullable: false,
     },
+
     updated_at: {
       type: "timestamptz",
-      default: () => "CURRENT_TIMESTAMP",
       onUpdate: "CURRENT_TIMESTAMP",
       nullable: false,
     },
@@ -86,5 +104,21 @@ module.exports = new EntitySchema({
       },
       onDelete: "CASCADE",
     },
+    
+    orderPayBox: {
+      type: "one-to-one",
+      target: "OrderPay",
+      inverseSide: "orderInfoBox",
+      cascade: true,
+    },
+    
+    orderTicketBox: {
+      type: "one-to-many",
+      target: "OrderTicket",
+      inverseSide: "orderInfoBox",
+      cascade: true,
+    },
+    
   },
+ 
 });

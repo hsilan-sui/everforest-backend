@@ -77,6 +77,8 @@ const memberController = {
     existMember.birth = new Date(birth); // 確保 birth 被轉換為 Date 類型
     existMember.photo_url = photo_url;
 
+    await memberInfo.save(existMember);
+
     return res.status(200).json({
       status: "success",
       message: "會員資料更新成功",
