@@ -3,8 +3,10 @@ const { dataSource } = require("../db/data-source");
 const { isUndefined, isNotValidString, isValidPassword } = require("../utils/validUtils");
 const appError = require("../utils/appError");
 const logger = require("../utils/logger")("Auth");
+const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { generateAccessJWT, generateRefreshJWT, verifyJWT } = require("../utils/jwtUtils");
+const { sendResetPasswordEmail } = require("../utils/emailUtils");
 
 const authController = {
   async signUp(req, res, next) {
@@ -280,6 +282,62 @@ const authController = {
     return res.status(200).json({
       status: "success",
       message: "密碼已成功重設",
+    });
+  },
+
+  async forgotPassword(req, res, next) {
+    const { email } = req.body;
+    if (isUndefined(email) || isNotValidString(email)) {
+      //這裡也不能明示是否有此email
+      return next(appError(400, "欄位必填"));
+    }
+
+    const memberRepo = dataSource.getRepository("MemberInfo");
+
+    const existMember = await memberRepo.findOne({
+      where: { email },
+    });
+
+    //這裡也不能明示
+    //// 即使查無此帳號，也回傳相同訊息（避免惡意查詢）
+    if (!existMember) {
+      return res.status(403).json({
+        status: "bad",
+        message: "異常請求，請稍後再試",
+      });
+    }
+
+    // 產生重設密碼的 token
+    const rawToken = crypto.randomBytes(32).toString("hex"); // 原始 token
+    const hashedToken = await bcrypt.hash(rawToken, 10); // 雜湊儲存用
+    const tokenExpire = new Date(Date.now() + 2 * 60 * 1000); // 有效 15 分鐘
+
+    // 15 分鐘內重複申請的簡單限制
+    if (
+      existMember.reset_password_expired_at &&
+      new Date(existMember.reset_password_expired_at) > new Date()
+    ) {
+      return res.status(429).json({
+        status: "error",
+        message: "請勿重複申請重設密碼，請稍後再試",
+      });
+    }
+    // 儲存 hashed token 和過期時間
+    existMember.reset_password_token = hashedToken;
+    existMember.reset_password_expired_at = tokenExpire;
+    await memberRepo.save(existMember);
+
+    // 建立前端用的重設連結（夾帶 raw token）
+    const resetLink = `https://camping-project-one.vercel.app/reset-password/${rawToken}`;
+
+    console.warn("寄送 email 前");
+
+    await sendResetPasswordEmail(email, resetLink); // 實際寄信
+    console.warn("sendResetPasswordEmail 函式已完成");
+
+    return res.status(200).json({
+      status: "success",
+      message: "重設密碼信件已寄出，請稍後確認",
     });
   },
 };

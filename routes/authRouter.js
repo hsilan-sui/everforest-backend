@@ -405,4 +405,17 @@ router.put("/reset-password", checkAuth, errorAsync(authController.resetPassword
 //忘記密碼
 router.post("/forgot-password", errorAsync(authController.forgotPassword));
 
+router.post("/test-email", async (req, res, next) => {
+  const { sendResetPasswordEmail } = require("../utils/emailUtils");
+  const testEmail = "hsilanyu@gmail.com";
+  const testLink = "https://camping-project-one.vercel.app/reset-password/test-token";
+
+  try {
+    await sendResetPasswordEmail(testEmail, testLink);
+    res.json({ status: "success", message: "測試信件已寄出" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
