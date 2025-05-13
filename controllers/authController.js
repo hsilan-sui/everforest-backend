@@ -3,8 +3,10 @@ const { dataSource } = require("../db/data-source");
 const { isUndefined, isNotValidString, isValidPassword } = require("../utils/validUtils");
 const appError = require("../utils/appError");
 const logger = require("../utils/logger")("Auth");
+const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { generateAccessJWT, generateRefreshJWT, verifyJWT } = require("../utils/jwtUtils");
+const { sendResetPasswordEmail } = require("../utils/emailUtils");
 
 const authController = {
   async signUp(req, res, next) {
@@ -252,6 +254,7 @@ const authController = {
       data: null,
     });
   },
+  //使用者登入狀態下改密碼
   async resetPassword(req, res, next) {
     const { newPassword } = req.body;
 
@@ -380,6 +383,121 @@ const authController = {
     } finally {
       await queryRunner.release(); // 釋放 queryRunner
     }
+  },
+  async forgotPassword(req, res, next) {
+    const { email } = req.body;
+    if (isUndefined(email) || isNotValidString(email)) {
+      //這裡也不能明示是否有此email
+      return next(appError(400, "欄位必填"));
+    }
+
+    const memberRepo = dataSource.getRepository("MemberInfo");
+
+    const existMember = await memberRepo.findOne({
+      where: { email },
+    });
+
+    //這裡也不能明示
+    //// 即使查無此帳號，也回傳相同訊息（避免惡意查詢）
+    if (!existMember) {
+      return res.status(403).json({
+        status: "bad",
+        message: "異常請求，請稍後再試",
+      });
+    }
+
+    // 產生重設密碼的 token
+    const rawToken = crypto.randomBytes(32).toString("hex"); // 原始 token
+    const hashedToken = await bcrypt.hash(rawToken, 10); // 雜湊儲存用
+    const tokenExpire = new Date(Date.now() + 2 * 60 * 1000); // 有效 15 分鐘
+
+    // 15 分鐘內重複申請的簡單限制
+    if (
+      existMember.reset_password_expired_at &&
+      new Date(existMember.reset_password_expired_at) > new Date()
+    ) {
+      return res.status(429).json({
+        status: "error",
+        message: "請勿重複申請重設密碼，請稍後再試",
+      });
+    }
+    // 儲存 hashed token 和過期時間
+    existMember.reset_password_token = hashedToken;
+    existMember.reset_password_expired_at = tokenExpire;
+    await memberRepo.save(existMember);
+
+    // 建立前端用的重設連結（夾帶 raw token）
+    // const resetLink = `https://camping-project-one.vercel.app/reset-password/${rawToken}`;
+    const resetLink = `https://camping-project-one.vercel.app/reset-password?resetId=${rawToken}`;
+
+    console.warn("寄送 email 前");
+
+    await sendResetPasswordEmail(email, resetLink); // 實際寄信
+    console.warn("sendResetPasswordEmail 函式已完成");
+
+    return res.status(200).json({
+      status: "success",
+      message: "重設密碼信件已寄出，請稍後確認",
+    });
+  },
+
+  //使用者未登入的狀態下重設密碼
+  //給「忘記密碼的使用者」用的，在沒有登入的情況下，透過 email 中的連結（帶 token）來設定新密碼
+  async resetPasswordByToken(req, res, next) {
+    const { token, newPassword } = req.body;
+
+    //[1] 檢查欄位是否正確
+    if (isNotValidString(token) || isNotValidString(newPassword)) {
+      return next(appError(400, "欄位填寫錯誤"));
+    }
+
+    // [2] 檢查密碼是否符合格式（自訂的規則）
+    if (!isValidPassword(newPassword)) {
+      return next(appError(400, "密碼不符合規則，需要包含英文數字大小寫，長度 8～16 字"));
+    }
+
+    //[3] 找出資料庫中是否有對應這個 token 的使用者
+    const memberRepo = dataSource.getRepository("MemberInfo");
+
+    //// 因為 token 是 bcrypt 雜湊，無法直接用 where 查詢，所以撈出來比對
+    const allMembers = await memberRepo.find();
+
+    let matchedMember = null;
+
+    for (const targetMember of allMembers) {
+      if (
+        targetMember.reset_password_token &&
+        (await bcrypt.compare(token, targetMember.reset_password_token))
+      ) {
+        // 檢查是否過期（比現在時間還晚才算有效）
+        if (new Date(targetMember.reset_password_expired_at) > new Date()) {
+          matchedMember = targetMember;
+          break;
+        }
+      }
+    }
+
+    // [4] 如果找不到符合的使用者或 token 已過期
+    if (!matchedMember) {
+      return next(appError(400, "連結已失效，請稍後再試"));
+    }
+
+    // [5] 寫入新密碼（雜湊）
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    matchedMember.password = hashedPassword;
+
+    // [6] 清除 token 與過期時間，避免被重複使用
+    matchedMember.reset_password_token = null;
+    matchedMember.reset_password_expired_at = null;
+
+    // [7] 儲存到資料庫
+    await memberRepo.save(matchedMember);
+
+    // [8] 回應成功
+    return res.status(200).json({
+      status: "success",
+      message: "請重新登入",
+    });
   },
 };
 

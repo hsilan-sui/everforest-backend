@@ -85,6 +85,17 @@ module.exports = new EntitySchema({
       enum: ["local", "google"],
       default: "local", //預設本地登入
     },
+    reset_password_token: {
+      //用 bcrypt.hash() 產生 儲存哈希後的 token
+      type: "varchar",
+      length: 256,
+      nullable: true,
+    },
+    reset_password_expired_at: {
+      //	通常 15–30 分鐘即可 設定 token 過期時間
+      type: "timestamptz",
+      nullable: true,
+    },
     created_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",

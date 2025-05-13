@@ -446,4 +446,134 @@ router.get(
   errorAsync(authController.googleCallback)
 );
 
+//忘記密碼
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: 忘記密碼 - 寄送重設連結
+ *     tags: [Auth 會員認證]
+ *     description: >
+ *       使用者在忘記密碼時輸入 email，系統將寄送一封內含重設連結（含 resetId token）的 email。<br />
+ *       此連結有效時間約 15 分鐘。
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: 使用者註冊時的 email
+ *                 example: suihsilan@gmail.com
+ *     responses:
+ *       200:
+ *         description: 信件已寄出（即使 email 不存在也回應成功）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 重設密碼信件已寄出，請稍後確認
+ *       429:
+ *         description: 過於頻繁請求（15 分鐘內再次請求）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 請勿重複申請重設密碼，請稍後再試
+ *       400:
+ *         description: 欄位錯誤或格式錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 欄位必填
+ *       500:
+ *         description: 伺服器錯誤
+ */
+
+router.post("/forgot-password", errorAsync(authController.forgotPassword));
+
+/**
+ * @swagger
+ * /auth/reset-password-by-token:
+ *   post:
+ *     summary: 忘記密碼 - 使用 token 重設密碼
+ *     tags: [Auth 會員認證]
+ *     description: >
+ *       使用者忘記密碼，透過 email 中收到的 token，輸入新密碼進行重設。<br />
+ *       前端需從連結中擷取 resetId，作為 token 一併送出。
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: 來自 email 的 token（resetId）
+ *                 example: 542dcc26569d7d65e0e0c6d25b1d606e3f77c1bc9f9c0514b14249de3b04c57a
+ *               newPassword:
+ *                 type: string
+ *                 description: 新密碼，需符合密碼強度規則（8～16 字，包含英文與數字）
+ *                 example: Abc123456
+ *     responses:
+ *       200:
+ *         description: 密碼重設成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 請重新登入
+ *       400:
+ *         description: 請求錯誤，如欄位缺失、token 錯誤或已過期
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 連結已失效，請稍後再試
+ *       500:
+ *         description: 伺服器錯誤
+ */
+
+router.post("/reset-password-by-token", errorAsync(authController.resetPasswordByToken));
+
 module.exports = router;
