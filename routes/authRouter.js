@@ -4,6 +4,7 @@ const router = express.Router();
 const checkAuth = require("../middlewares/checkAuth");
 const errorAsync = require("../utils/errorAsync");
 const authController = require("../controllers/authController");
+const passport = require("passport");
 
 /**
  * @swagger
@@ -401,5 +402,48 @@ router.post("/logout", errorAsync(authController.postMemberLogout));
  *         description: 伺服器錯誤
  */
 router.put("/reset-password", checkAuth, errorAsync(authController.resetPassword));
+
+/**
+ * @swagger
+ * /api/v1/auth/oauth/google:
+ *   get:
+ *     summary: 透過 Google 登入（OAuth 2.0）
+ *     tags: [Auth 會員認證]
+ *     description: 透過 Google OAuth 重導使用者至 Google 授權頁面，使用者授權後將自動跳轉至 callback URL。
+ *     responses:
+ *       302:
+ *         description: 重導至 Google 授權頁面
+ *       500:
+ *         description: 伺服器錯誤
+ */
+router.get(
+  "/oauth/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"], // 要求的授權範圍
+  })
+);
+
+/**
+ * @swagger
+ * /api/v1/auth/oauth/google/callback:
+ *   get:
+ *     summary: Google OAuth 登入 callback
+ *     tags: [Auth 會員認證]
+ *     description: |
+ *       Google 授權完成後自動導向此 callback。Passport 將透過授權碼交換 access token，
+ *       並取得使用者資訊，進行登入或註冊處理，最終將使用者導回前端頁面。
+ *     responses:
+ *       302:
+ *         description: 成功登入後導回前端頁面
+ *       401:
+ *         description: 授權失敗，導向登入頁面
+ *       500:
+ *         description: 登入流程發生錯誤
+ */
+router.get(
+  "/oauth/google/callback",
+  passport.authenticate("google", { session: false, failureRedirect: "/login" }),
+  errorAsync(authController.googleCallback)
+);
 
 module.exports = router;
