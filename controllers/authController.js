@@ -384,6 +384,7 @@ const authController = {
       await queryRunner.release(); // 釋放 queryRunner
     }
   },
+
   async forgotPassword(req, res, next) {
     const { email } = req.body;
     if (isUndefined(email) || isNotValidString(email)) {
