@@ -9,7 +9,10 @@ const adminController = {
     try {
       const MemberInfo = dataSource.getRepository("MemberInfo");
 
-      const admin = await MemberInfo.findOneBy({ id: req.user.id });
+      const admin = await MemberInfo.findOne({
+        where: { id: req.user.id },
+        select: ["id", "email", "username", "role", "firstname", "lastname"],
+      });
 
       if (!admin || admin.role !== "admin") {
         return next(appError(403, "你沒有權限存取此資源"));
