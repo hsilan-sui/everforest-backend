@@ -7,6 +7,7 @@ const pinoHttp = require("pino-http");
 const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
 
+const adminRouter = require("./routes/adminRouter");
 const memberRouter = require("./routes/memberRouter");
 const hostRouter = require("./routes/hostRouter");
 const eventsRouter = require("./routes/eventsRouter");
@@ -15,6 +16,7 @@ const orderRouter = require("./routes/orderRouter");
 
 const cookieParser = require("cookie-parser");
 const setupSwagger = require("./swagger");
+const passport = require("./config/passport");
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
@@ -28,7 +30,7 @@ if (process.env.NODE_ENV !== "production") {
 const app = express();
 //  router 註冊之前
 setupSwagger(app);
-
+app.use(passport.initialize());
 //=> 這裡再進階處理cookie 允許前端請求帶入cookie (裡面夾帶token)
 const corsOptions = {
   origin:
@@ -67,6 +69,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
+
+app.use("/api/v1/admin", adminRouter);
 
 // /api/v1/auth (登入註冊)
 app.use("/api/v1/auth", authRouter);
