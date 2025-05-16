@@ -7,6 +7,7 @@ const pinoHttp = require("pino-http");
 const logger = require("./utils/logger")("App");
 const authRouter = require("./routes/authRouter");
 
+const adminRouter = require("./routes/adminRouter");
 const memberRouter = require("./routes/memberRouter");
 const hostRouter = require("./routes/hostRouter");
 const eventsRouter = require("./routes/eventsRouter");
@@ -67,6 +68,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
+
+app.use("/api/v1/admin", adminRouter);
 
 // /api/v1/auth (登入註冊)
 app.use("/api/v1/auth", authRouter);

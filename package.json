@@ -18,7 +18,8 @@
     "init:schema": "typeorm schema:sync -d ./db/data-source.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "if [ \"$HUSKY\" != \"0\" ]; then husky install; fi"
+    "prepare": "if [ \"$HUSKY\" != \"0\" ]; then husky install; fi",
+    "seed:admin:docker": "docker compose exec backend node scripts/seedAdmin.js"
   },
   "keywords": [],
   "author": "",
