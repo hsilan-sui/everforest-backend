@@ -35,7 +35,7 @@ module.exports = new EntitySchema({
     phone: {
       type: "varchar",
       length: 72,
-      nullable: false, //註冊必填
+      nullable: true,
       unique: true,
     },
     password: {
