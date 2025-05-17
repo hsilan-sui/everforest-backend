@@ -13,6 +13,7 @@ const formidable = require("formidable");
 const logger = require("../utils/logger")("Event");
 
 const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
+const { getLatLngByAddress } = require("../utils/geocode");
 
 const eventController = {
   /**
@@ -63,9 +64,10 @@ const eventController = {
       cancel_policy,
       registration_open_time,
       registration_close_time,
-      latitude,
-      longitude,
     } = req.body;
+
+    // 先透過地址換經緯度
+    const latlng = await getLatLngByAddress(address);
 
     //驗證必填欄位 isUndefined, isNotValidString
     if (
@@ -129,8 +131,8 @@ const eventController = {
         cancel_policy,
         registration_open_time: registration_open_time || null,
         registration_close_time: registration_close_time || null,
-        latitude: latitude || null,
-        longitude: longitude || null,
+        latitude: latlng ? latlng.latitude : null,
+        longitude: latlng ? latlng.longitude : null,
       });
 
       //用 .save() 儲存到資料庫 => 將剛剛組好的活動資料正式寫入 EventInfo 表格
@@ -153,7 +155,7 @@ const eventController = {
             id: savedEvent.id,
             host_info_id: savedEvent.host_info_id,
             title: savedEvent.title,
-            // address: savedEvent.address,
+            address: savedEvent.address,
             // description: savedEvent.description,
             // start_time: savedEvent.start_time,
             // end_time: savedEvent.end_time,
@@ -161,8 +163,8 @@ const eventController = {
             // cancel_policy: savedEvent.cancel_policy,
             // registration_open_time: savedEvent.registration_open_time || null,
             // registration_close_time: savedEvent.registration_close_time || null,
-            // latitude: savedEvent.latitude || null,
-            // longitude: savedEvent.longitude || null,
+            latitude: savedEvent.latitude || null,
+            longitude: savedEvent.longitude || null,
             status: savedEvent.status,
             active: savedEvent.active,
             // created_at: savedEvent.created_at,
@@ -1116,6 +1118,30 @@ const eventController = {
           tags: event.eventTagInfoBox?.map((tagInfo) => tagInfo.eventTagsBox?.name) || [],
         })),
       },
+    });
+  },
+
+  async getLiveMapEvents(req, res) {
+    const eventRepo = dataSource.getRepository("EventInfo");
+
+    const events = await eventRepo.find({
+      where: { active: "published" },
+      select: [
+        "id",
+        "title",
+        "latitude",
+        "longitude",
+        "status",
+        "start_time",
+        "end_time",
+        "address",
+      ],
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "取得動態地圖成功",
+      data: { events },
     });
   },
 };

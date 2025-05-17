@@ -884,4 +884,78 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  */
 router.get("/", errorAsync(eventController.getEvents));
 
+/**
+ * @swagger
+ * /api/v1/events/map/live_map:
+ *   get:
+ *     summary: 取得所有上架活動的地理座標資訊
+ *     tags: [Events]
+ *     description: 回傳所有 `active = published` 的活動，包含標題、地點、狀態與起訖時間等資訊，用於地圖顯示。
+ *     responses:
+ *       200:
+ *         description: 成功取得動態地圖活動資料
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 取得動態地圖成功
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: 16ac7827-b6e0-4cbc-9140-4661e7d33588
+ *                           title:
+ *                             type: string
+ *                             example: 2025 復興區角板山sisi露營派對
+ *                           latitude:
+ *                             type: number
+ *                             format: float
+ *                             example: 24.8162611
+ *                           longitude:
+ *                             type: number
+ *                             format: float
+ *                             example: 121.3488891
+ *                           status:
+ *                             type: string
+ *                             enum: [preparing, registering, expired, full]
+ *                             example: registering
+ *                           start_time:
+ *                             type: string
+ *                             format: date-time
+ *                             example: 2025-07-20T08:00:00.000Z
+ *                           end_time:
+ *                             type: string
+ *                             format: date-time
+ *                             example: 2025-07-21T17:00:00.000Z
+ *                           address:
+ *                             type: string
+ *                             example: 桃園市復興區角板山1號
+ *       500:
+ *         description: 伺服器錯誤，請稍後再試
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤，請稍後再試
+ */
+router.get("/map/live_map", errorAsync(eventController.getLiveMapEvents));
+
 module.exports = router;
