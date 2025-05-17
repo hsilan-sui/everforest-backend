@@ -285,7 +285,105 @@ const authController = {
       message: "密碼已成功重設",
     });
   },
+  async googleCallback(req, res, next) {
+    // 這裡的 req.user 是由 passport-google-oauth20 自動填入的
+    const { email, googleId, name, picture } = req.user;
+    const queryRunner = dataSource.createQueryRunner();
 
+    try {
+      await queryRunner.startTransaction(); // 開始事務
+      const memberRepo = dataSource.getRepository("MemberInfo");
+      const memberAuthRepo = dataSource.getRepository("MemberAuthProvider");
+      const member = await memberRepo.findOne({
+        where: { email },
+        relations: ["memberAuthProviderBox"],
+      });
+
+      if (member) {
+        // 已有該 email，將其與 Google 登入資料連結
+        const memberAuth = await memberAuthRepo.create({
+          member_info_id: member.id,
+          provider: "google",
+          provider_sub: googleId,
+          email_verified: true,
+        });
+
+        await memberAuthRepo.save(memberAuth);
+      } else {
+        const [firstname, ...rest] = name.split(" ");
+        const lastname = rest.join(" "); // 剩餘部分作為 lastname
+        const username = email && email.includes("@") ? email.split("@")[0] : "";
+
+        // 如果 email 不存在，創建新的 MemberInfo 並加入 Google 登入資料
+        const newMember = await memberRepo.create({
+          email,
+          firstname,
+          lastname: lastname || "",
+          username,
+          primary_provider: "google",
+          photo_url: picture,
+        });
+
+        const savedNewMember = await memberRepo.save(newMember);
+
+        const newMemberAuth = await memberAuthRepo.create({
+          member_info_id: savedNewMember.id,
+          provider: "google",
+          provider_sub: googleId,
+          email: email,
+          name: name,
+          picture_url: picture,
+          email_verified: true,
+        });
+
+        await memberAuthRepo.save(newMemberAuth);
+      }
+
+      const userPayload = {
+        email,
+        googleId,
+        name,
+        picture,
+      };
+
+      // 生成 Access Token 和 Refresh Token
+      const accessToken = generateAccessJWT(userPayload);
+      const refreshToken = generateRefreshJWT(userPayload);
+
+      // 設定 Cookie
+      res.cookie("access_token", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
+        sameSite: "None",
+        maxAge: 1000 * 60 * 15, // 15 分鐘
+        path: "/",
+      });
+
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
+        sameSite: "None",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
+        path: "/",
+      });
+
+      // 提交事務
+      await queryRunner.commitTransaction();
+
+      // 重定向到前端頁面
+      const redirectURL =
+        process.env.NODE_ENV === "production"
+          ? process.env.FRONTEND_PRO_ORIGIN
+          : process.env.FRONTEND_DEV_ORIGIN;
+      res.redirect(redirectURL);
+    } catch (error) {
+      await queryRunner.rollbackTransaction(); // 回滾事務
+      const message = error instanceof Error ? error.message : "未知錯誤";
+      return next(appError(500, `Google 登入失敗，請稍後再試：${message}`));
+    } finally {
+      await queryRunner.release(); // 釋放 queryRunner
+    }
+  },
   async forgotPassword(req, res, next) {
     const { email } = req.body;
     if (isUndefined(email) || isNotValidString(email)) {
