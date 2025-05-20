@@ -10,7 +10,6 @@ module.exports = new EntitySchema({
       nullable: false,
       generated: "uuid",
     },
-
     member_info_id: {
       type: "uuid",
       nullable: false,
@@ -24,7 +23,6 @@ module.exports = new EntitySchema({
       enum: ["Unpaid", "Paying", "Paid", "Refunding", "Refunded", "Cancelled"],
       default: "Unpaid",
     },
-
     quantity: {
       type: "integer",
       default: () => "1",
@@ -32,21 +30,13 @@ module.exports = new EntitySchema({
     },
     total_price: {
       type: "integer",
-      
+      nullable: false,
+    },
     merchantTradeNo: {
       type: "varchar",
       length: 20,
       unique: true,
       nullable: true,
-    },
-      
-    quantity: {
-      type: "int",
-      default: 1,
-    },
-    total_price: {
-      type: "int",
-      nullable: false,
     },
     cancelled_at: {
       type: "timestamptz",
@@ -56,34 +46,26 @@ module.exports = new EntitySchema({
       type: "text",
       nullable: true,
     },
-
-
     event_addons: {
       type: "jsonb",
       nullable: true,
       default: () => "'[]'",
     },
-
     book_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
-    book_at: {
-      type: "timestamptz",
-      nullable: false,
     },
     created_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
       nullable: false,
     },
-
     updated_at: {
       type: "timestamptz",
       onUpdate: "CURRENT_TIMESTAMP",
       nullable: false,
     },
   },
-
   relations: {
     memberBox: {
       type: "many-to-one",
@@ -94,7 +76,6 @@ module.exports = new EntitySchema({
       },
       onDelete: "CASCADE",
     },
-
     eventPlanBox: {
       type: "many-to-one",
       target: "EventPlan",
@@ -104,21 +85,17 @@ module.exports = new EntitySchema({
       },
       onDelete: "CASCADE",
     },
-    
     orderPayBox: {
       type: "one-to-one",
       target: "OrderPay",
       inverseSide: "orderInfoBox",
       cascade: true,
     },
-    
     orderTicketBox: {
       type: "one-to-many",
       target: "OrderTicket",
       inverseSide: "orderInfoBox",
       cascade: true,
     },
-    
   },
- 
 });

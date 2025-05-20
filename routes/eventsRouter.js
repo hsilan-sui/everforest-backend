@@ -731,6 +731,66 @@ router.patch(
 
 /**
  * @swagger
+ * /api/v1/events/recommend:
+ *   get:
+ *     summary: 取得推薦活動，依縣市分類
+ *     tags: [Events]
+ *     description: 取得所有已發布的活動，並依據地址中的縣市名稱分類回傳
+ *     responses:
+ *       200:
+ *         description: 成功取得推薦活動
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 取得推薦活動成功
+ *                 data:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           example: "3a325cbd-04b2-4373-94ba-b03041fa9bcb"
+ *                         title:
+ *                           type: string
+ *                           example: "2025 復興區角板山sisi露營派對"
+ *                         description:
+ *                           type: string
+ *                           example: "和sisi，一起來狂野露營！上山下水都奉陪"
+ *                         photos:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                             format: uri
+ *                             example: "https://example.com/photo1.jpg"
+ *       500:
+ *         description: 伺服器錯誤，請稍後再試
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤，請稍後再試
+ */
+router.get("/recommend", errorAsync(eventController.recommendEvents));
+
+/**
+ * @swagger
  * /api/v1/events/{eventId}:
  *   get:
  *     summary: 取得公開活動詳情（僅限已上架活動）

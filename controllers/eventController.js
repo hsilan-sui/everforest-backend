@@ -1121,6 +1121,46 @@ const eventController = {
     });
   },
 
+  async recommendEvents(req, res) {
+    const eventRepo = dataSource.getRepository("EventInfo");
+    const events = await eventRepo.find({
+      relations: ["eventPhotoBox"],
+      where: { active: "published" },
+    });
+
+    const extractCity = (address) => {
+      if (!address) return null;
+      const match = address.match(/(.+?[縣市])/);
+      if (match) {
+        return match[1].slice(0, -1);
+      }
+      return null;
+    };
+
+    const groupedEvents = {};
+
+    events.forEach((event) => {
+      const city = extractCity(event.address) || "其他";
+
+      if (!groupedEvents[city]) {
+        groupedEvents[city] = [];
+      }
+
+      groupedEvents[city].push({
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        photos: event.eventPhotoBox?.map((photo) => photo.photo_url) || [],
+      });
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "取得推薦活動成功",
+      data: groupedEvents,
+    });
+  },
+
   async getLiveMapEvents(req, res) {
     const eventRepo = dataSource.getRepository("EventInfo");
 
