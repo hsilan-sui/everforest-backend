@@ -54,6 +54,7 @@ module.exports = new EntitySchema({
     book_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
+      nullable: false,
     },
     created_at: {
       type: "timestamptz",
