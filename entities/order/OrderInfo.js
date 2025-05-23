@@ -10,24 +10,33 @@ module.exports = new EntitySchema({
       nullable: false,
       generated: "uuid",
     },
+    member_info_id: {
+      type: "uuid",
+      nullable: false,
+    },
+    event_plan_id: {
+      type: "uuid",
+      nullable: false,
+    },
+    status: {
+      type: "enum",
+      enum: ["Unpaid", "Paying", "Paid", "Refunding", "Refunded", "Cancelled"],
+      default: "Unpaid",
+    },
+    quantity: {
+      type: "integer",
+      default: () => "1",
+      nullable: false,
+    },
+    total_price: {
+      type: "integer",
+      nullable: false,
+    },
     merchantTradeNo: {
       type: "varchar",
       length: 20,
       unique: true,
       nullable: true,
-    },
-    status: {
-      type: "enum",
-      enum: ["未付款", "付款中", "已付款", "退款中", "已退款"],
-      default: "未付款",
-    },
-    quantity: {
-      type: "int",
-      default: 1,
-    },
-    total_price: {
-      type: "int",
-      nullable: false,
     },
     cancelled_at: {
       type: "timestamptz",
@@ -37,8 +46,14 @@ module.exports = new EntitySchema({
       type: "text",
       nullable: true,
     },
+    event_addons: {
+      type: "jsonb",
+      nullable: true,
+      default: () => "'[]'",
+    },
     book_at: {
       type: "timestamptz",
+      default: () => "CURRENT_TIMESTAMP",
       nullable: false,
     },
     created_at: {
@@ -46,18 +61,29 @@ module.exports = new EntitySchema({
       default: () => "CURRENT_TIMESTAMP",
       nullable: false,
     },
+    updated_at: {
+      type: "timestamptz",
+      onUpdate: "CURRENT_TIMESTAMP",
+      nullable: false,
+    },
   },
   relations: {
     memberBox: {
       type: "many-to-one",
-      target: "MemberInfo",
-      joinColumn: { name: "member_info_id" },
+      target: "MemberInfo", // 目標 Entity 名稱
+      inverseSide: "orderBox", // 在 MemberInfo 裡對應的欄位名（反向關聯）
+      joinColumn: {
+        name: "member_info_id", // 自己的關聯欄位
+      },
       onDelete: "CASCADE",
     },
     eventPlanBox: {
       type: "many-to-one",
       target: "EventPlan",
-      joinColumn: { name: "event_plan_id" },
+      inverseSide: "orderBox",
+      joinColumn: {
+        name: "event_plan_id",
+      },
       onDelete: "CASCADE",
     },
     orderPayBox: {
