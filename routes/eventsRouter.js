@@ -909,7 +909,7 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *                           example: 5
  *                         sort:
  *                           type: string
- *                           example: price
+ *                           example: asc
  *                     events:
  *                       type: array
  *                       items:
