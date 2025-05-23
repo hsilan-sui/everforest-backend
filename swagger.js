@@ -34,7 +34,12 @@ const swaggerSpec = swaggerJSDoc(options);
 
 const setupSwagger = (app) => {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get("/swagger.json", (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.send(swaggerSpec);
+  });
   console.warn("Swagger 文檔已掛載在 /api-docs");
+  console.warn("Swagger JSON 檔已掛載在 /swagger.json");
 };
 
 module.exports = setupSwagger;
