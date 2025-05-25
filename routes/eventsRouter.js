@@ -508,6 +508,10 @@ router.post(
  *                       type: number
  *                       description: 折扣價（可省略）
  *                       example: 2500
+ *                     people_capacity:
+ *                       type: integer
+ *                       description: 此方案可容納人數上限
+ *                       example: 4
  *                     contents:
  *                       type: array
  *                       items:
@@ -935,6 +939,10 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *                           price:
  *                             type: string
  *                             example: "1500"
+ *                           people:
+ *                             type: integer
+ *                             example: 4
+ *                             description: 活動可容納人數
  *                           photos:
  *                             type: array
  *                             items:

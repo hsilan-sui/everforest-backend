@@ -660,13 +660,21 @@ const eventController = {
       const createdPlans = [];
 
       for (const plan of plans) {
-        const { title, price, discounted_price, contents = [], addons = [] } = plan;
+        const {
+          title,
+          price,
+          discounted_price,
+          contents = [],
+          addons = [],
+          people_capacity,
+        } = plan;
 
         const newPlan = planRepo.create({
           event_info_id: eventId,
           title,
           price,
           discounted_price: discounted_price || null,
+          people_capacity: people_capacity || null,
         });
 
         const savedPlan = await planRepo.save(newPlan);
@@ -695,6 +703,7 @@ const eventController = {
           title: savedPlan.title,
           price: savedPlan.price,
           discounted_price: savedPlan.discounted_price,
+          people_capacity: savedPlan.people_capacity,
           contents: newContents.map((c) => c.content),
           addons: newAddons.map((a) => ({ name: a.name, price: a.price })),
         });
@@ -1004,7 +1013,19 @@ const eventController = {
   },
 
   async getEvents(req, res, next) {
-    const { startTime, endTime, location, minPrice, maxPrice, people, page, per, sort } = req.query;
+    const {
+      startTime,
+      endTime,
+      location,
+      minPrice,
+      maxPrice,
+      people,
+      page,
+      per,
+      sort,
+      level,
+      tag,
+    } = req.query;
     // 分頁與排序設定
     const currentPage = page ? parseInt(page) : 1;
     const perPage = per ? parseInt(per) : 10;
@@ -1054,8 +1075,8 @@ const eventController = {
     // 處理人數篩選
     if (people && !isNaN(parseInt(people))) {
       const parsedPeople = parseInt(people);
-      queryBuilder.andWhere("eventPlanBox.title LIKE :peopleText", {
-        peopleText: `%${parsedPeople}人%`,
+      queryBuilder.andWhere("eventPlanBox.people_capacity >= :people", {
+        people: parsedPeople,
       });
     }
 
@@ -1087,6 +1108,15 @@ const eventController = {
       queryBuilder.addOrderBy(`event.${sortField}`, sortOrder);
     }
 
+    if (level) {
+      queryBuilder.andWhere("eventTagsBox.level = :level", { level });
+    }
+
+    if (tag) {
+      const tagList = Array.isArray(tag) ? tag : tag.split(",");
+      queryBuilder.andWhere("eventTagsBox.name IN (:...tagList)", { tagList });
+    }
+
     // 分頁
     queryBuilder.skip((currentPage - 1) * perPage).take(perPage);
 
@@ -1113,9 +1143,14 @@ const eventController = {
           start_time: event.start_time,
           end_time: event.end_time,
           address: event ? event.address : "",
-          price: event.eventPlanBox.length > 0 ? event.eventPlanBox[0].price.toString() : "",
+          plans: event.eventPlanBox.map((plan) => ({
+            title: plan.title,
+            price: plan.price,
+            people_capacity: plan.people_capacity,
+          })),
           photos: event.eventPhotoBox?.map((photo) => photo.photo_url) || [],
           tags: event.eventTagInfoBox?.map((tagInfo) => tagInfo.eventTagsBox?.name) || [],
+          levels: event.eventTagInfoBox?.map((tagInfo) => tagInfo.eventTagsBox?.level) || [],
         })),
       },
     });
