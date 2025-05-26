@@ -29,7 +29,7 @@ module.exports = new EntitySchema({
     },
     people_capacity: {
       type: "integer",
-      nullable: true,
+      nullable: false,
     },
     created_at: {
       type: "timestamptz",

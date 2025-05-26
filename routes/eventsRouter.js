@@ -832,13 +832,13 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *     tags: [Events]
  *     parameters:
  *       - in: query
- *         name: startTime
+ *         name: start_time
  *         schema:
  *           type: string
  *           format: date-time
  *         description: 活動開始時間（ISO 格式）
  *       - in: query
- *         name: endTime
+ *         name: end_time
  *         schema:
  *           type: string
  *           format: date-time
@@ -849,12 +849,12 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *           type: string
  *         description: 活動地點關鍵字（模糊搜尋）
  *       - in: query
- *         name: minPrice
+ *         name: min_price
  *         schema:
  *           type: integer
  *         description: 最低價格
  *       - in: query
- *         name: maxPrice
+ *         name: max_price
  *         schema:
  *           type: integer
  *         description: 最高價格

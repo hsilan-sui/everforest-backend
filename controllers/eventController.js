@@ -1014,11 +1014,11 @@ const eventController = {
 
   async getEvents(req, res, next) {
     const {
-      startTime,
-      endTime,
+      start_time: startTime,
+      end_time: endTime,
       location,
-      minPrice,
-      maxPrice,
+      min_price: minPrice,
+      max_price: maxPrice,
       people,
       page,
       per,
@@ -1026,6 +1026,7 @@ const eventController = {
       level,
       tag,
     } = req.query;
+
     // 分頁與排序設定
     const currentPage = page ? parseInt(page) : 1;
     const perPage = per ? parseInt(per) : 10;
@@ -1056,20 +1057,31 @@ const eventController = {
       .where("event.active = :active", { active: "published" });
 
     // 處理 startTime 和 endTime 篩選
-    if (startTime) {
+    if (startTime && endTime) {
       const isStartTimeValid = !isNaN(Date.parse(startTime));
-      if (!isStartTimeValid) {
-        return next(appError(400, "參數格式錯誤，請確認填寫正確"));
-      }
-      queryBuilder.andWhere("event.start_time >= :startTime", { startTime });
-    }
-
-    if (endTime) {
       const isEndTimeValid = !isNaN(Date.parse(endTime));
-      if (!isEndTimeValid) {
+      if (!isStartTimeValid || !isEndTimeValid) {
         return next(appError(400, "參數格式錯誤，請確認填寫正確"));
       }
-      queryBuilder.andWhere("event.end_time <= :endTime", { endTime });
+      queryBuilder.andWhere("event.start_time <= :endTime AND event.end_time >= :startTime", {
+        startTime,
+        endTime,
+      });
+    } else {
+      if (startTime) {
+        const isStartTimeValid = !isNaN(Date.parse(startTime));
+        if (!isStartTimeValid) {
+          return next(appError(400, "參數格式錯誤，請確認填寫正確"));
+        }
+        queryBuilder.andWhere("event.end_time >= :startTime", { startTime });
+      }
+      if (endTime) {
+        const isEndTimeValid = !isNaN(Date.parse(endTime));
+        if (!isEndTimeValid) {
+          return next(appError(400, "參數格式錯誤，請確認填寫正確"));
+        }
+        queryBuilder.andWhere("event.start_time <= :endTime", { endTime });
+      }
     }
 
     // 處理人數篩選
