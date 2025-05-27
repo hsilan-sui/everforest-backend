@@ -138,4 +138,5 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  */
 router.post("/:orderId/payment-callback", errorAsync(orderController.postPaymentCallback));
 
+router.post("/:orderId/refund", errorAsync(orderController.postPaymentRefund));
 module.exports = router;

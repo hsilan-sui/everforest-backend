@@ -63,10 +63,10 @@ const uploadImageFile = async (file, imageType) => {
   // 上傳檔案到 Firebase Storage
   await bucket.upload(file.filepath, { destination: remoteFilePath });
 
-  // 獲取檔案的讀取 URL，並設置 24 小時過期時間
+  // 獲取檔案的讀取 URL
   const [imageUrl] = await bucket.file(remoteFilePath).getSignedUrl({
     action: "read",
-    expires: Date.now() + 24 * 60 * 60 * 1000,
+    expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
   });
 
   return imageUrl;
