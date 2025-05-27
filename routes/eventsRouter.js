@@ -508,6 +508,10 @@ router.post(
  *                       type: number
  *                       description: 折扣價（可省略）
  *                       example: 2500
+ *                     people_capacity:
+ *                       type: integer
+ *                       description: 此方案可容納人數上限
+ *                       example: 4
  *                     contents:
  *                       type: array
  *                       items:
@@ -828,13 +832,13 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *     tags: [Events]
  *     parameters:
  *       - in: query
- *         name: startTime
+ *         name: start_time
  *         schema:
  *           type: string
  *           format: date-time
  *         description: 活動開始時間（ISO 格式）
  *       - in: query
- *         name: endTime
+ *         name: end_time
  *         schema:
  *           type: string
  *           format: date-time
@@ -845,12 +849,12 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *           type: string
  *         description: 活動地點關鍵字（模糊搜尋）
  *       - in: query
- *         name: minPrice
+ *         name: min_price
  *         schema:
  *           type: integer
  *         description: 最低價格
  *       - in: query
- *         name: maxPrice
+ *         name: max_price
  *         schema:
  *           type: integer
  *         description: 最高價格
@@ -935,6 +939,10 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *                           price:
  *                             type: string
  *                             example: "1500"
+ *                           people:
+ *                             type: integer
+ *                             example: 4
+ *                             description: 活動可容納人數
  *                           photos:
  *                             type: array
  *                             items:
