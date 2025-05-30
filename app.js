@@ -70,6 +70,7 @@ app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
 
+
 app.use("/api/v1/admin", adminRouter);
 
 // /api/v1/auth (登入註冊)
