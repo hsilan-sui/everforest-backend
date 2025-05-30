@@ -291,6 +291,7 @@ const authController = {
     const queryRunner = dataSource.createQueryRunner();
 
     try {
+      await queryRunner.connect();
       await queryRunner.startTransaction(); // 開始事務
       const memberRepo = dataSource.getRepository("MemberInfo");
       const memberAuthRepo = dataSource.getRepository("MemberAuthProvider");
@@ -300,15 +301,22 @@ const authController = {
       });
 
       if (member) {
-        // 已有該 email，將其與 Google 登入資料連結
-        const memberAuth = await memberAuthRepo.create({
-          member_info_id: member.id,
-          provider: "google",
-          provider_sub: googleId,
-          email_verified: true,
+        const existingAuth = await memberAuthRepo.findOne({
+          where: {
+            provider: "google",
+            provider_sub: googleId,
+          },
         });
+        if (!existingAuth) {
+          const memberAuth = await memberAuthRepo.create({
+            member_info_id: member.id,
+            provider: "google",
+            provider_sub: googleId,
+            email_verified: true,
+          });
 
-        await memberAuthRepo.save(memberAuth);
+          await memberAuthRepo.save(memberAuth);
+        }
       } else {
         const [firstname, ...rest] = name.split(" ");
         const lastname = rest.join(" "); // 剩餘部分作為 lastname
@@ -384,6 +392,7 @@ const authController = {
       await queryRunner.release(); // 釋放 queryRunner
     }
   },
+
   async forgotPassword(req, res, next) {
     const { email } = req.body;
     if (isUndefined(email) || isNotValidString(email)) {
