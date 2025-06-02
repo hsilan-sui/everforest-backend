@@ -358,31 +358,14 @@ const authController = {
       const accessToken = generateAccessJWT(userPayload);
       const refreshToken = generateRefreshJWT(userPayload);
 
-      // 設定 Cookie
-      res.cookie("access_token", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
-        sameSite: "None",
-        maxAge: 1000 * 60 * 15, // 15 分鐘
-        path: "/",
-      });
-
-      res.cookie("refresh_token", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
-        sameSite: "None",
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
-        path: "/",
-      });
-
       // 提交事務
       await queryRunner.commitTransaction();
 
       // 重定向到前端頁面
       const redirectURL =
         process.env.NODE_ENV === "production"
-          ? process.env.FRONTEND_PRO_ORIGIN
-          : process.env.FRONTEND_DEV_ORIGIN;
+          ? `${process.env.FRONTEND_PRO_ORIGIN}/api/auth/set-cookie?accessToken=${accessToken}&refreshToken=${refreshToken}`
+          : `${process.env.FRONTEND_DEV_ORIGIN}/api/auth/set-cookie?accessToken=${accessToken}&refreshToken=${refreshToken}`;
       res.redirect(redirectURL);
     } catch (error) {
       await queryRunner.rollbackTransaction(); // 回滾事務
