@@ -366,7 +366,6 @@ const authController = {
         process.env.NODE_ENV === "production"
           ? `${process.env.FRONTEND_PRO_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`
           : `${process.env.FRONTEND_DEV_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`;
-
       res.redirect(redirectURL);
     } catch (error) {
       await queryRunner.rollbackTransaction(); // 回滾事務
