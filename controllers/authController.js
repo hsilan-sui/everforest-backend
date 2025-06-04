@@ -293,8 +293,8 @@ const authController = {
     try {
       await queryRunner.connect();
       await queryRunner.startTransaction(); // 開始事務
-      const memberRepo = dataSource.getRepository("MemberInfo");
-      const memberAuthRepo = dataSource.getRepository("MemberAuthProvider");
+      const memberRepo = queryRunner.manager.getRepository("MemberInfo");
+      const memberAuthRepo = queryRunner.manager.getRepository("MemberAuthProvider");
       const member = await memberRepo.findOne({
         where: { email },
         relations: ["memberAuthProviderBox"],
@@ -364,8 +364,8 @@ const authController = {
       // 重定向到前端頁面
       const redirectURL =
         process.env.NODE_ENV === "production"
-          ? `${process.env.FRONTEND_PRO_ORIGIN}/api/auth/set-cookie?accessToken=${accessToken}&refreshToken=${refreshToken}`
-          : `${process.env.FRONTEND_DEV_ORIGIN}/api/auth/set-cookie?accessToken=${accessToken}&refreshToken=${refreshToken}`;
+          ? `${process.env.FRONTEND_PRO_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`
+          : `${process.env.FRONTEND_DEV_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`;
       res.redirect(redirectURL);
     } catch (error) {
       await queryRunner.rollbackTransaction(); // 回滾事務
