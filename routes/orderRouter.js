@@ -138,4 +138,16 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  */
 router.post("/:orderId/payment-callback", errorAsync(orderController.postPaymentCallback));
 
+router.get("/", checkAuth, errorAsync(orderController.getMemberOrder));
+
+router.post("/", checkAuth, errorAsync(orderController.postMemberOrder));
+
+router.patch("/:orderid", checkAuth, errorAsync(orderController.patchMemberOrder));
+
+router.delete("/:orderid", checkAuth, errorAsync(orderController.deleteMemberOrder));
+
+router.post("/:orderid/ticket", checkAuth, errorAsync(orderController.postOrderTicket));
+
+router.get("/:orderid/ticket/:ticketid", checkAuth, errorAsync(orderController.getOrderTicket));
+
 module.exports = router;
