@@ -291,24 +291,32 @@ const authController = {
     const queryRunner = dataSource.createQueryRunner();
 
     try {
+      await queryRunner.connect();
       await queryRunner.startTransaction(); // 開始事務
-      const memberRepo = dataSource.getRepository("MemberInfo");
-      const memberAuthRepo = dataSource.getRepository("MemberAuthProvider");
+      const memberRepo = queryRunner.manager.getRepository("MemberInfo");
+      const memberAuthRepo = queryRunner.manager.getRepository("MemberAuthProvider");
       const member = await memberRepo.findOne({
         where: { email },
         relations: ["memberAuthProviderBox"],
       });
 
       if (member) {
-        // 已有該 email，將其與 Google 登入資料連結
-        const memberAuth = await memberAuthRepo.create({
-          member_info_id: member.id,
-          provider: "google",
-          provider_sub: googleId,
-          email_verified: true,
+        const existingAuth = await memberAuthRepo.findOne({
+          where: {
+            provider: "google",
+            provider_sub: googleId,
+          },
         });
+        if (!existingAuth) {
+          const memberAuth = await memberAuthRepo.create({
+            member_info_id: member.id,
+            provider: "google",
+            provider_sub: googleId,
+            email_verified: true,
+          });
 
-        await memberAuthRepo.save(memberAuth);
+          await memberAuthRepo.save(memberAuth);
+        }
       } else {
         const [firstname, ...rest] = name.split(" ");
         const lastname = rest.join(" "); // 剩餘部分作為 lastname
@@ -350,31 +358,14 @@ const authController = {
       const accessToken = generateAccessJWT(userPayload);
       const refreshToken = generateRefreshJWT(userPayload);
 
-      // 設定 Cookie
-      res.cookie("access_token", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
-        sameSite: "None",
-        maxAge: 1000 * 60 * 15, // 15 分鐘
-        path: "/",
-      });
-
-      res.cookie("refresh_token", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "development" ? false : true, // 本地可先設 false
-        sameSite: "None",
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
-        path: "/",
-      });
-
       // 提交事務
       await queryRunner.commitTransaction();
 
       // 重定向到前端頁面
       const redirectURL =
         process.env.NODE_ENV === "production"
-          ? process.env.FRONTEND_PRO_ORIGIN
-          : process.env.FRONTEND_DEV_ORIGIN;
+          ? `${process.env.FRONTEND_PRO_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`
+          : `${process.env.FRONTEND_DEV_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`;
       res.redirect(redirectURL);
     } catch (error) {
       await queryRunner.rollbackTransaction(); // 回滾事務
@@ -384,6 +375,7 @@ const authController = {
       await queryRunner.release(); // 釋放 queryRunner
     }
   },
+
   async forgotPassword(req, res, next) {
     const { email } = req.body;
     if (isUndefined(email) || isNotValidString(email)) {

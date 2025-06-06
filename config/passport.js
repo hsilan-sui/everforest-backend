@@ -7,7 +7,7 @@ passport.use(
     {
       clientID: config.get("secret.google.clientId"),
       clientSecret: config.get("secret.google.clientSecret"),
-      callbackURL: `${config.get("secret.google.callbackURL")}/api/v1/auth/oauth/google/callback`,
+      callbackURL: `${config.get("secret.google.callbackURL")}`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {

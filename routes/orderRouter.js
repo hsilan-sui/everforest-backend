@@ -137,6 +137,80 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  *               example: 1|OK
  */
 router.post("/:orderId/payment-callback", errorAsync(orderController.postPaymentCallback));
+/**
+ * @swagger
+ * /api/v1/member/order/{orderId}/refund:
+ *   post:
+ *     summary: 退款
+ *     tags: [Orders]
+ *     description: |
+ *       根據指定的訂單 ID，進行退款動作，並更新付款與訂單狀態。
+ *       📌 僅限管理員或系統操作使用。
+ *       ⚠️ 請確認該筆訂單已付款，且尚未退款。
+ *     parameters:
+ *       - name: orderId
+ *         in: path
+ *         required: true
+ *         description: 訂單 ID（UUID 格式）
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *           example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
+ *     responses:
+ *       200:
+ *         description: 退款成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 退款成功
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
+ *                     refundedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-07-23T07:15:00.000Z"
+ *       400:
+ *         description: 無法退款（可能已退款或狀態不符合）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 該訂單已退款
+ *       404:
+ *         description: 找不到訂單或付款紀錄
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: 找不到訂單
+ *       500:
+ *         description: 伺服器錯誤
+ */
+router.post("/:orderId/refund", errorAsync(orderController.postPaymentRefund));
 
 router.get("/", checkAuth, errorAsync(orderController.getMemberOrder));
 

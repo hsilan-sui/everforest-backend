@@ -508,6 +508,10 @@ router.post(
  *                       type: number
  *                       description: 折扣價（可省略）
  *                       example: 2500
+ *                     people_capacity:
+ *                       type: integer
+ *                       description: 此方案可容納人數上限
+ *                       example: 4
  *                     contents:
  *                       type: array
  *                       items:
@@ -731,6 +735,60 @@ router.patch(
 
 /**
  * @swagger
+ * /api/v1/events/recommend:
+ *   get:
+ *     summary: 取得推薦活動，依縣市分類
+ *     tags: [Events]
+ *     description: 根據活動地址中的縣市名稱進行分類，回傳所有已發布的推薦活動。
+ *     responses:
+ *       200:
+ *         description: 成功取得推薦活動
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 取得推薦活動成功
+ *                 data:
+ *                   type: object
+ *                   example:
+ *                     台北:
+ *                       - id: "3a325cbd-04b2-4373-94ba-b03041fa9bcb"
+ *                         title: "2025 復興區角板山sisi露營派對3"
+ *                         description: "和sisi，一起來狂野露營！上山下水都奉陪3"
+ *                         photos: []
+ *                       - id: "953fc991-8a85-4726-99df-11922bb423a5"
+ *                         title: "2025 復興區角板山sisi露營派對1"
+ *                         description: "和sisi，一起來狂野露營！上山下水都奉陪1"
+ *                         photos: []
+ *                     宜蘭:
+ *                       - id: "1c362f8e-1e42-44d5-9bc7-30d5c431f766"
+ *                         title: "2025 復興區角板山sisi露營派對yo"
+ *                         description: "和sisi，一起來狂野露營！上山下水都奉陪yo"
+ *                         photos: []
+ *       500:
+ *         description: 伺服器錯誤，請稍後再試
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤，請稍後再試
+ */
+router.get("/recommend", errorAsync(eventController.recommendEvents));
+
+/**
+ * @swagger
  * /api/v1/events/{eventId}:
  *   get:
  *     summary: 取得公開活動詳情（僅限已上架活動）
@@ -774,13 +832,13 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *     tags: [Events]
  *     parameters:
  *       - in: query
- *         name: startTime
+ *         name: start_time
  *         schema:
  *           type: string
  *           format: date-time
  *         description: 活動開始時間（ISO 格式）
  *       - in: query
- *         name: endTime
+ *         name: end_time
  *         schema:
  *           type: string
  *           format: date-time
@@ -791,15 +849,20 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *           type: string
  *         description: 活動地點關鍵字（模糊搜尋）
  *       - in: query
- *         name: minPrice
+ *         name: min_price
  *         schema:
  *           type: integer
  *         description: 最低價格
  *       - in: query
- *         name: maxPrice
+ *         name: max_price
  *         schema:
  *           type: integer
  *         description: 最高價格
+ *       - in: query
+ *         name: people
+ *         schema:
+ *           type: integer
+ *         description: 人數關鍵字
  *       - in: query
  *         name: page
  *         schema:
@@ -838,12 +901,16 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *                       properties:
  *                         page:
  *                           type: integer
+ *                           example: 1
  *                         per:
  *                           type: integer
+ *                           example: 10
  *                         total:
  *                           type: integer
+ *                           example: 50
  *                         total_pages:
  *                           type: integer
+ *                           example: 5
  *                         sort:
  *                           type: string
  *                           example: asc
@@ -854,20 +921,51 @@ router.get("/:eventId", errorAsync(eventController.getPublicEvent));
  *                         properties:
  *                           id:
  *                             type: string
+ *                             example: "123e4567-e89b-12d3-a456-426614174000"
  *                           title:
  *                             type: string
+ *                             example: "登山健行活動"
  *                           start_time:
  *                             type: string
  *                             format: date-time
+ *                             example: "2025-08-01T10:00:00.000Z"
  *                           end_time:
  *                             type: string
  *                             format: date-time
+ *                             example: "2025-08-01T16:00:00.000Z"
  *                           address:
  *                             type: string
+ *                             example: "台北市信義區信義路五段7號"
  *                           price:
  *                             type: string
+ *                             example: "1500"
+ *                           people:
+ *                             type: integer
+ *                             example: 4
+ *                             description: 活動可容納人數
+ *                           photos:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                               example: "https://example.com/photo.jpg"
+ *                           tags:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                               example: "戶外活動"
  *       400:
  *         description: 參數格式錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 參數格式錯誤，請確認填寫正確
  *       500:
  *         description: 伺服器錯誤，請稍後再試
  *         content:

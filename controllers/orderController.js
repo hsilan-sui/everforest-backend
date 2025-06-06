@@ -104,6 +104,41 @@ const orderController = {
 
     res.send("1|OK");
   },
+  
+  async refundPayment(req, res, next) {
+    const { orderId } = req.params;
+    const orderRepo = dataSource.getRepository("OrderInfo");
+    const orderPayRepo = dataSource.getRepository("OrderPay");
+
+    const order = await orderRepo.findOne({ where: { id: orderId } });
+
+    if (!order) {
+      return next(appError(404, "找不到訂單"));
+    }
+
+    const payRecord = await orderPayRepo.findOne({ where: { order_info_id: orderId } });
+    if (!payRecord) return next(appError(404, "找不到付款紀錄"));
+    if (payRecord.refund_at) {
+      return next(appError(400, "該訂單已退款"));
+    }
+    payRecord.refund_at = new Date();
+    await orderPayRepo.save(payRecord);
+
+    order.status = "已退款";
+    await orderRepo.save(order);
+
+    return res.status(200).json({
+      status: "success",
+      message: "退款成功",
+      data: {
+        orderId: order.id,
+        refundedAt: payRecord.refund_at,
+      },
+    });
+
+  },
+  
+  <<<<<<< feature/bk-rubio/new_order_ticket
 
   async getMemberOrder(req, res, next) {
     const memberId = req.user?.id;

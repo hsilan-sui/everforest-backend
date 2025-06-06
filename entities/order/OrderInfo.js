@@ -10,7 +10,6 @@ module.exports = new EntitySchema({
       nullable: false,
       generated: "uuid",
     },
-
     member_info_id: {
       type: "uuid",
       nullable: false,
@@ -24,7 +23,6 @@ module.exports = new EntitySchema({
       enum: ["Unpaid", "Paying", "Paid", "Refunding", "Refunded", "Cancelled"],
       default: "Unpaid",
     },
-
     quantity: {
       type: "integer",
       default: () => "1",
@@ -70,7 +68,6 @@ module.exports = new EntitySchema({
       nullable: false,
     },
   },
-
   relations: {
     memberBox: {
       type: "many-to-one",
@@ -81,7 +78,6 @@ module.exports = new EntitySchema({
       },
       onDelete: "CASCADE",
     },
-
     eventPlanBox: {
       type: "many-to-one",
       target: "EventPlan",
@@ -91,14 +87,12 @@ module.exports = new EntitySchema({
       },
       onDelete: "CASCADE",
     },
-
     orderPayBox: {
       type: "one-to-one",
       target: "OrderPay",
       inverseSide: "orderInfoBox",
       cascade: true,
     },
-
     orderTicketBox: {
       type: "one-to-many",
       target: "OrderTicket",
