@@ -55,6 +55,7 @@ services: #定義服務
     volumes:
       - .:/app # 把專案掛進容器（才能即時看見程式碼改動）
       - /app/node_modules # 避免 node_modules 被蓋掉
+      - ./public/qrcodes:/app/public/qrcodes
     networks: #與 PostgreSQL 一起用同個虛擬網路 → 可以用服務名稱 postgres 來連資料庫
       #表示 backend 也掛在同一個虛擬網路上，可用 postgres 來連資料庫
       - everforest_network
