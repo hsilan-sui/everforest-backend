@@ -104,7 +104,7 @@ const orderController = {
 
     res.send("1|OK");
   },
-  
+
   async refundPayment(req, res, next) {
     const { orderId } = req.params;
     const orderRepo = dataSource.getRepository("OrderInfo");
@@ -135,10 +135,7 @@ const orderController = {
         refundedAt: payRecord.refund_at,
       },
     });
-
   },
-  
-  <<<<<<< feature/bk-rubio/new_order_ticket
 
   async getMemberOrder(req, res, next) {
     const memberId = req.user?.id;
