@@ -28,6 +28,17 @@ module.exports = new EntitySchema({
       type: "timestamptz",
       nullable: true,
     },
+
+    qr_image_url: {
+      type: "varchar",
+      length: 2048,
+      nullable: true,
+    },
+
+    qr_data_uri: {
+      type: "text",
+      nullable: true,
+    },
   },
   relations: {
     orderInfoBox: {

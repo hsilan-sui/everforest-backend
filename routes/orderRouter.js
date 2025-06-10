@@ -137,7 +137,6 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  *               example: 1|OK
  */
 router.post("/:orderId/payment-callback", errorAsync(orderController.postPaymentCallback));
-
 /**
  * @swagger
  * /api/v1/member/order/{orderId}/refund:
@@ -212,4 +211,17 @@ router.post("/:orderId/payment-callback", errorAsync(orderController.postPayment
  *         description: 伺服器錯誤
  */
 router.post("/:orderId/refund", errorAsync(orderController.postPaymentRefund));
+
+router.get("/", checkAuth, errorAsync(orderController.getMemberOrder));
+
+router.post("/", checkAuth, errorAsync(orderController.postMemberOrder));
+
+router.patch("/:orderid", checkAuth, errorAsync(orderController.patchMemberOrder));
+
+router.delete("/:orderid", checkAuth, errorAsync(orderController.deleteMemberOrder));
+
+router.post("/:orderid/ticket", checkAuth, errorAsync(orderController.postOrderTicket));
+
+router.get("/:orderid/ticket/:ticketid", checkAuth, errorAsync(orderController.getOrderTicket));
+
 module.exports = router;
