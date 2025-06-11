@@ -7,21 +7,30 @@ const orderController = require("../controllers/orderController");
 
 /**
  * @swagger
- * /api/v1/member/orders/{orderId}/payment:
+ * /api/v1/member/orders/payment:
  *   post:
  *     summary: 處理訂單付款
  *     description: |
  *       此 API 用於處理訂單的付款，會生成一個付款表單並回傳給前端，前端可使用該表單進行付款。
  *       需要身份驗證，使用者必須先登入。
  *     tags: [Orders]
- *     parameters:
- *       - name: orderId
- *         in: path
- *         required: true
- *         description: 訂單的唯一識別碼
- *         schema:
- *           type: string
- *           example: "12345"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderIds
+ *             properties:
+ *               orderIds:
+ *                 type: array
+ *                 description: 多筆訂單的唯一識別碼陣列
+ *                 items:
+ *                   type: string
+ *                 example:
+ *                   - "37a76112-d82e-41da-a459-5cdff0e7571b"
+ *                   - "b0ac1202-9840-4a8d-8d7c-b6e7ed7a5857"
  *     responses:
  *       200:
  *         description: 成功生成付款表單
@@ -82,11 +91,11 @@ const orderController = require("../controllers/orderController");
  *                   type: string
  *                   example: 伺服器錯誤
  */
-router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayment));
+router.post("/payment", checkAuth, errorAsync(orderController.postPayment));
 
 /**
  * @swagger
- * /api/v1/member/orders/{orderId}/payment-callback:
+ * /api/v1/member/orders/payment-callback:
  *   post:
  *     summary: 綠界付款回調通知 (ECPay Payment Callback)
  *     description: |
@@ -96,14 +105,6 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  *       綠界要求系統回傳：
  *       - `1|OK`：處理成功
  *     tags: [Orders]
- *     parameters:
- *       - name: orderId
- *         in: path
- *         required: true
- *         description: 訂單 ID（僅作為路由識別，實際驗證以 MerchantTradeNo 為主）
- *         schema:
- *           type: string
- *           example: "12345"
  *     requestBody:
  *       required: true
  *       content:
@@ -136,7 +137,8 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  *               type: string
  *               example: 1|OK
  */
-router.post("/:orderId/payment-callback", errorAsync(orderController.postPaymentCallback));
+router.post("/payment-callback", errorAsync(orderController.postPaymentCallback));
+
 /**
  * @swagger
  * /api/v1/member/order/{orderId}/refund:

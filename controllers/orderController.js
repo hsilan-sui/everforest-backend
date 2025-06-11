@@ -13,6 +13,7 @@ const { Not, IsNull: TypeORMIsNull } = require("typeorm");
 const nodemailer = require("nodemailer");
 const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 const os = require("os");
+const { In } = require("typeorm");
 
 const options = {
   OperationMode: "Test", //Test or Production
@@ -26,39 +27,83 @@ const options = {
 };
 const orderController = {
   async postPayment(req, res, next) {
-    const orderId = req.params.orderId;
+    let orderIds = req.body.orderIds;
+
+    // 支援單筆字串或多筆陣列
+    if (!orderIds) {
+      return next(appError(400, "請提供訂單ID"));
+    }
+
+    if (typeof orderIds === "string") {
+      // 單筆訂單
+      orderIds = [orderIds];
+    }
+
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return next(appError(400, "訂單ID格式錯誤"));
+    }
+
     const orderRepo = dataSource.getRepository("OrderInfo");
-    const order = await orderRepo.findOne({
-      where: {
-        id: orderId,
-      },
-      relations: ["eventPlan"],
+    const orders = await orderRepo.find({
+      where: { id: In(orderIds) },
+      relations: ["eventPlanBox"],
     });
 
-    if (!order) {
+    if (orders.length !== orderIds.length) {
       return next(appError(404, "訂單未找到"));
     }
 
-    if (
-      isUndefined(order.merchantTradeNo) ||
-      isNotValidString(order.merchantTradeNo) ||
-      isUndefined(order.total_price) ||
-      isNotValidInteger(order.total_price) ||
-      isUndefined(order.eventPlan.title) ||
-      isNotValidString(order.eventPlan.title)
-    ) {
-      return next(appError(400, "欄位未填寫正確"));
+    // 檢查欄位
+    for (const order of orders) {
+      if (
+        (order.merchantTradeNo && isNotValidString(order.merchantTradeNo)) ||
+        isUndefined(order.total_price) ||
+        isNotValidInteger(order.total_price) ||
+        isUndefined(order.eventPlanBox.title) ||
+        isNotValidString(order.eventPlanBox.title)
+      ) {
+        return next(appError(400, "欄位未填寫正確"));
+      }
+    }
+
+    // 總金額加總
+    const totalAmount = orders.reduce((sum, order) => sum + order.total_price, 0);
+
+    // 建立付款單
+    const orderPayRepo = dataSource.getRepository("OrderPay");
+    const newOrderPay = orderPayRepo.create({
+      method: "ecpay",
+      gateway: "ecpay",
+      amount: totalAmount,
+    });
+    await orderPayRepo.save(newOrderPay);
+
+    // 產生付款參數
+    const MerchantTradeNo = `ORDERPAY${newOrderPay.id.replace(/-/g, "").slice(0, 12)}`;
+
+    // 更新訂單綁定付款ID
+    for (const order of orders) {
+      order.order_pay_id = newOrderPay.id;
+      order.merchantTradeNo = MerchantTradeNo;
+      await orderRepo.save(order);
     }
 
     let base_param = {
-      MerchantTradeNo: order.merchantTradeNo,
-      MerchantTradeDate: dayjs(order.created_at).format("YYYY/MM/DD HH:mm:ss"),
-      TotalAmount: order.total_price,
+      MerchantTradeNo,
+      MerchantTradeDate: dayjs().format("YYYY/MM/DD HH:mm:ss"),
+      TotalAmount: String(totalAmount),
       TradeDesc: "訂單付款",
-      ItemName: order.eventPlan.title,
-      ReturnURL: `${process.env.DB_HOST}/api/v1/member/orders/${order.id}/payment-callback`,
-      ClientBackURL: `${process.env.DB_HOST}`,
+      ItemName:
+        orders.length === 1
+          ? orders[0].eventPlanBox.title
+          : orders.map((o) => o.eventPlanBox.title).join("#"),
+      ReturnURL: `${process.env.BACKEND_DEV_ORIGIN}/api/v1/member/orders/payment-callback`,
+      ClientBackURL: `${process.env.FRONTEND_DEV_ORIGIN}`,
+      PaymentType: "aio",
+      ChoosePayment: "ALL",
+      EncryptType: 1,
     };
+
     const create = new ecpay_payment(options);
 
     // 注意：在此事直接提供 html + js 直接觸發的範例，直接從前端觸發付款行為
@@ -69,6 +114,7 @@ const orderController = {
   },
   async postPaymentCallback(req, res) {
     const { CheckMacValue } = req.body;
+
     const data = { ...req.body };
     delete data.CheckMacValue;
 
@@ -78,28 +124,38 @@ const orderController = {
     // 1. 取得訂單
     const orderRepo = dataSource.getRepository("OrderInfo");
     const orderPayRepo = dataSource.getRepository("OrderPay");
-    const order = await orderRepo.findOne({
+    const orderInfo = await orderRepo.findOne({
       where: {
         merchantTradeNo: data.MerchantTradeNo,
       },
+    });
+    const orderPay = await orderPayRepo.findOne({
+      where: { id: orderInfo.order_pay_id },
     });
 
     console.warn("確認交易正確性：", CheckMacValue === checkValue, CheckMacValue, checkValue);
 
     // 2. 建立付款資料
-    await orderPayRepo.save({
-      order_info_id: order.id,
-      method: data.PaymentType,
-      gateway: "ecpay",
+    await orderPayRepo.update(orderPay.id, {
       amount: data.TradeAmt,
       transaction_id: data.TradeNo,
-      paid_at: new Date(data.PaymentDate),
+      paid_at: new Date(),
+      method: data.PaymentType,
+      gateway: "ecpay",
+      updated_at: new Date(),
     });
 
-    // 3. 如果訂單成功付款，則更新訂單狀態
+    // 3. 更新所有綁定這筆付款的訂單狀態
+    const orders = await orderRepo.find({
+      where: { order_pay_id: orderPay.id },
+    });
+
+    // 4. 如果訂單成功付款，則更新訂單狀態
     if (String(data.RtnCode) === "1") {
-      order.status = "已付款";
-      await orderRepo.save(order);
+      for (const order of orders) {
+        order.status = "Paid";
+        await orderRepo.save(order);
+      }
     }
 
     res.send("1|OK");
