@@ -99,7 +99,7 @@ const orderController = {
           ? orders[0].eventPlanBox.title
           : orders.map((o) => o.eventPlanBox.title).join("#"),
       ReturnURL: `${process.env.BACKEND_DEV_ORIGIN}/api/v1/member/orders/payment-callback`,
-      ClientBackURL: `${process.env.FRONTEND_DEV_ORIGIN}/api/v1/member/orders/payment-success`,
+      ClientBackURL: `${process.env.FRONTEND_DEV_ORIGIN}/api/v1/member/orders/payment-success?MerchantTradeNo=${MerchantTradeNo}`,
       PaymentType: "aio",
       ChoosePayment: "ALL",
       EncryptType: 1,
@@ -111,7 +111,7 @@ const orderController = {
     const html = create.payment_client.aio_check_out_all(base_param);
 
     // 回傳表單資料給前端
-    res.json({ html, MerchantTradeNo, orderIds });
+    res.json({ html });
   },
   async postPaymentCallback(req, res) {
     const { CheckMacValue } = req.body;
