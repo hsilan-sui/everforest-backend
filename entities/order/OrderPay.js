@@ -33,6 +33,10 @@ module.exports = new EntitySchema({
       type: "timestamptz",
       nullable: true,
     },
+    refund_amount: {
+      type: "integer",
+      nullable: true,
+    },
     refund_at: {
       type: "timestamptz",
       nullable: true,
