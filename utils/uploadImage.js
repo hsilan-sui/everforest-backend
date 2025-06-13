@@ -2,6 +2,9 @@ const firebaseAdmin = require("firebase-admin");
 const config = require("../config/index");
 const { v4: uuidv4 } = require("uuid");
 const path = require("path");
+const sharp = require("sharp");
+const fs = require("fs/promises");
+const os = require("os");
 
 // 處理 firebase 上傳
 // 初始化
@@ -49,10 +52,6 @@ const uploadImageFile = async (file, imageType) => {
   // 根據 imageType 設置檔案大小限制
   const maxFileSize = FILE_SIZE_LIMITS[imageType] || 2 * 1024 * 1024; // 預設為 2MB
 
-  if (file.size > maxFileSize) {
-    throw new Error(`檔案太大，請選擇小於 ${maxFileSize / (1024 * 1024)} MB 的圖片`);
-  }
-
   // 根據 imageType 選擇對應資料夾，若無對應則使用 'others'
   const folder = folderMapping[imageType] || "others";
 
@@ -60,8 +59,26 @@ const uploadImageFile = async (file, imageType) => {
   const ext = path.extname(file.originalFilename);
   const remoteFilePath = `${folder}/${uuidv4()}${ext}`;
 
+  let fileToUpload = file.filepath;
+  let isCompressed = false;
+
+  // 若檔案超出大小限制，自動壓縮
+  if (file.size > maxFileSize) {
+    const tempPath = path.join(os.tmpdir(), `${uuidv4()}${ext}`);
+    // 使用 sharp 壓縮圖片
+    await sharp(file.filepath).resize({ width: 1280 }).jpeg({ quality: 80 }).toFile(tempPath);
+
+    fileToUpload = tempPath;
+    isCompressed = true;
+  }
+
   // 上傳檔案到 Firebase Storage
-  await bucket.upload(file.filepath, { destination: remoteFilePath });
+  await bucket.upload(fileToUpload, { destination: remoteFilePath });
+
+  // 清除壓縮後的暫存檔案
+  if (isCompressed) {
+    await fs.unlink(fileToUpload);
+  }
 
   // 獲取檔案的讀取 URL
   const [imageUrl] = await bucket.file(remoteFilePath).getSignedUrl({
