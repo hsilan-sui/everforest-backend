@@ -14,6 +14,7 @@ const nodemailer = require("nodemailer");
 const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 const os = require("os");
 const { In } = require("typeorm");
+const { sendOrderSuccessEmail } = require("../utils/emailUtils");
 
 const options = {
   OperationMode: "Test", //Test or Production
@@ -148,13 +149,31 @@ const orderController = {
     // 3. 更新所有綁定這筆付款的訂單狀態
     const orders = await orderRepo.find({
       where: { order_pay_id: orderPay.id },
+      relations: ["eventPlanBox", "memberBox", "eventPlanBox.eventBox"],
     });
+
+    const orderList = [];
+    let email = null;
 
     // 4. 如果訂單成功付款，則更新訂單狀態
     if (String(data.RtnCode) === "1") {
       for (const order of orders) {
         order.status = "Paid";
         await orderRepo.save(order);
+
+        // 取得 email
+        if (!email) email = order.memberBox?.email;
+
+        // 準備寄信資料
+        orderList.push({
+          activityName: order.eventPlanBox.title,
+          date: `${order.eventPlanBox.eventBox.start_time} ~ ${order.eventPlanBox.eventBox.end_time}`,
+          amount: order.total_price,
+        });
+      }
+
+      if (email) {
+        await sendOrderSuccessEmail(email, orderList);
       }
     }
 
@@ -171,27 +190,68 @@ const orderController = {
     if (!order) {
       return next(appError(404, "找不到訂單"));
     }
+    if (order.status === "Refunded" || order.status === "Refunding") {
+      return next(
+        appError(400, `該訂單已${order.status === "Refunded" ? "退款完成" : "正在退款中"}`)
+      );
+    }
 
-    const payRecord = await orderPayRepo.findOne({ where: { order_info_id: orderId } });
+    const payRecord = await orderPayRepo.findOne({ where: { id: order.order_pay_id } });
     if (!payRecord) return next(appError(404, "找不到付款紀錄"));
     if (payRecord.refund_at) {
-      return next(appError(400, "該訂單已退款"));
+      return next(appError(400, "該訂單已全額退款"));
     }
-    payRecord.refund_at = new Date();
-    await orderPayRepo.save(payRecord);
 
-    order.status = "已退款";
+    // 申請退款階段，狀態改成 refunding
+    order.status = "Refunding";
+    order.refund_amount = order.total_price;
+    order.refund_at = new Date();
     await orderRepo.save(order);
+
+    // 1 分鐘後才變成 refunded
+    setTimeout(async () => {
+      try {
+        order.status = "Refunded";
+        order.refund_amount = order.total_price;
+        order.refund_at = new Date();
+        await orderRepo.save(order);
+
+        // 計算該付款紀錄已退款訂單的退款金額總和
+        const refundedOrders = await orderRepo.find({
+          where: { order_pay_id: payRecord.id, status: "Refunded" },
+        });
+        const totalRefunded = refundedOrders.reduce((sum, o) => sum + (o.refund_amount || 0), 0);
+
+        payRecord.refund_amount = totalRefunded;
+        if (payRecord.refund_amount >= payRecord.amount) {
+          payRecord.refund_at = new Date();
+        }
+        await orderPayRepo.save(payRecord);
+      } catch (error) {
+        console.warn("退款狀態更新失敗:", error);
+      }
+    }, 60000);
 
     return res.status(200).json({
       status: "success",
-      message: "退款成功",
+      message: "退款申請已送出，正在處理退款",
       data: {
-        orderId: order.id,
-        refundedAt: payRecord.refund_at,
+        orderInfo: {
+          id: order.id,
+          status: order.status,
+          refundAmount: order.refund_amount,
+          refundedAt: order.refund_at,
+        },
+        orderPay: {
+          id: payRecord.id,
+          paidAmount: payRecord.amount,
+          refundAmount: payRecord.refund_amount,
+          refundedAt: payRecord.refund_at || null, // 僅全退才會有值
+        },
       },
     });
   },
+
   async getMemberOrder(req, res, next) {
     const memberId = req.user?.id;
 
