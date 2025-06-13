@@ -154,6 +154,7 @@ const orderController = {
 
     const orderList = [];
     let email = null;
+
     // 4. 如果訂單成功付款，則更新訂單狀態
     if (String(data.RtnCode) === "1") {
       for (const order of orders) {
@@ -250,6 +251,7 @@ const orderController = {
       },
     });
   },
+
   async getMemberOrder(req, res, next) {
     const memberId = req.user?.id;
 
