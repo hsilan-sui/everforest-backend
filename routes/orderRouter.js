@@ -143,12 +143,20 @@ router.post("/payment-callback", errorAsync(orderController.postPaymentCallback)
  * @swagger
  * /api/v1/member/order/{orderId}/refund:
  *   post:
- *     summary: 退款
+ *     summary: 申請訂單退款
  *     tags: [Orders]
  *     description: |
- *       根據指定的訂單 ID，進行退款動作，並更新付款與訂單狀態。
+ *       根據指定的訂單 ID，申請退款。退款申請送出後，訂單狀態會變為 **Refunding**（退款中），
+ *       系統會在約 1 分鐘後自動更新為 **Refunded**（退款完成）。
+ *       同時會更新該付款紀錄中所有已退款訂單的退款金額加總，判斷付款是否已全額退款。
+ *
+ *       使用說明：
+ *       - `orderInfo` 反映單筆訂單退款狀態、退款金額與退款時間。
+ *       - 部分訂單退款時，`orderPay.refundedAt` 為 `null`，退款金額為該付款下已退款訂單的總和。
+ *       - 全額退款時，`orderPay.refundedAt` 會顯示付款退款完成時間。
+ *
  *       📌 僅限管理員或系統操作使用。
- *       ⚠️ 請確認該筆訂單已付款，且尚未退款。
+ *       ⚠️ 請確認該筆訂單已付款，且尚未退款或退款中。
  *     parameters:
  *       - name: orderId
  *         in: path
@@ -160,7 +168,7 @@ router.post("/payment-callback", errorAsync(orderController.postPaymentCallback)
  *           example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
  *     responses:
  *       200:
- *         description: 退款成功
+ *         description: 退款申請成功，正在處理退款中
  *         content:
  *           application/json:
  *             schema:
@@ -171,20 +179,47 @@ router.post("/payment-callback", errorAsync(orderController.postPaymentCallback)
  *                   example: success
  *                 message:
  *                   type: string
- *                   example: 退款成功
+ *                   example: 退款申請已送出，正在處理退款
  *                 data:
  *                   type: object
  *                   properties:
- *                     orderId:
- *                       type: string
- *                       format: uuid
- *                       example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
- *                     refundedAt:
- *                       type: string
- *                       format: date-time
- *                       example: "2025-07-23T07:15:00.000Z"
+ *                     orderInfo:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
+ *                         status:
+ *                           type: string
+ *                           example: "Refunding"
+ *                         refundAmount:
+ *                           type: number
+ *                           example: 1000
+ *                         refundedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2025-07-23T07:15:00.000Z"
+ *                     orderPay:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           example: "a8f5f167-f44f-47bf-beca-94efb3e6bb76"
+ *                         paidAmount:
+ *                           type: number
+ *                           example: 3000
+ *                         refundAmount:
+ *                           type: number
+ *                           example: 1000
+ *                         refundedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           nullable: true
+ *                           example: null
  *       400:
- *         description: 無法退款（可能已退款或狀態不符合）
+ *         description: 退款失敗（可能已退款或狀態不符合）
  *         content:
  *           application/json:
  *             schema:
@@ -212,7 +247,7 @@ router.post("/payment-callback", errorAsync(orderController.postPaymentCallback)
  *       500:
  *         description: 伺服器錯誤
  */
-router.post("/:orderId/refund", errorAsync(orderController.postPaymentRefund));
+router.post("/:orderId/refund", errorAsync(orderController.refundPayment));
 
 router.get("/", checkAuth, errorAsync(orderController.getMemberOrder));
 
