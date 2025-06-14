@@ -7,21 +7,30 @@ const orderController = require("../controllers/orderController");
 
 /**
  * @swagger
- * /api/v1/member/orders/{orderId}/payment:
+ * /api/v1/member/orders/payment:
  *   post:
  *     summary: 處理訂單付款
  *     description: |
  *       此 API 用於處理訂單的付款，會生成一個付款表單並回傳給前端，前端可使用該表單進行付款。
  *       需要身份驗證，使用者必須先登入。
  *     tags: [Orders]
- *     parameters:
- *       - name: orderId
- *         in: path
- *         required: true
- *         description: 訂單的唯一識別碼
- *         schema:
- *           type: string
- *           example: "12345"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderIds
+ *             properties:
+ *               orderIds:
+ *                 type: array
+ *                 description: 多筆訂單的唯一識別碼陣列
+ *                 items:
+ *                   type: string
+ *                 example:
+ *                   - "37a76112-d82e-41da-a459-5cdff0e7571b"
+ *                   - "b0ac1202-9840-4a8d-8d7c-b6e7ed7a5857"
  *     responses:
  *       200:
  *         description: 成功生成付款表單
@@ -82,11 +91,11 @@ const orderController = require("../controllers/orderController");
  *                   type: string
  *                   example: 伺服器錯誤
  */
-router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayment));
+router.post("/payment", checkAuth, errorAsync(orderController.postPayment));
 
 /**
  * @swagger
- * /api/v1/member/orders/{orderId}/payment-callback:
+ * /api/v1/member/orders/payment-callback:
  *   post:
  *     summary: 綠界付款回調通知 (ECPay Payment Callback)
  *     description: |
@@ -96,14 +105,6 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  *       綠界要求系統回傳：
  *       - `1|OK`：處理成功
  *     tags: [Orders]
- *     parameters:
- *       - name: orderId
- *         in: path
- *         required: true
- *         description: 訂單 ID（僅作為路由識別，實際驗證以 MerchantTradeNo 為主）
- *         schema:
- *           type: string
- *           example: "12345"
  *     requestBody:
  *       required: true
  *       content:
@@ -136,17 +137,26 @@ router.post("/:orderId/payment", checkAuth, errorAsync(orderController.postPayme
  *               type: string
  *               example: 1|OK
  */
-router.post("/:orderId/payment-callback", errorAsync(orderController.postPaymentCallback));
+router.post("/payment-callback", errorAsync(orderController.postPaymentCallback));
+
 /**
  * @swagger
  * /api/v1/member/order/{orderId}/refund:
  *   post:
- *     summary: 退款
+ *     summary: 申請訂單退款
  *     tags: [Orders]
  *     description: |
- *       根據指定的訂單 ID，進行退款動作，並更新付款與訂單狀態。
+ *       根據指定的訂單 ID，申請退款。退款申請送出後，訂單狀態會變為 **Refunding**（退款中），
+ *       系統會在約 1 分鐘後自動更新為 **Refunded**（退款完成）。
+ *       同時會更新該付款紀錄中所有已退款訂單的退款金額加總，判斷付款是否已全額退款。
+ *
+ *       使用說明：
+ *       - `orderInfo` 反映單筆訂單退款狀態、退款金額與退款時間。
+ *       - 部分訂單退款時，`orderPay.refundedAt` 為 `null`，退款金額為該付款下已退款訂單的總和。
+ *       - 全額退款時，`orderPay.refundedAt` 會顯示付款退款完成時間。
+ *
  *       📌 僅限管理員或系統操作使用。
- *       ⚠️ 請確認該筆訂單已付款，且尚未退款。
+ *       ⚠️ 請確認該筆訂單已付款，且尚未退款或退款中。
  *     parameters:
  *       - name: orderId
  *         in: path
@@ -158,7 +168,7 @@ router.post("/:orderId/payment-callback", errorAsync(orderController.postPayment
  *           example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
  *     responses:
  *       200:
- *         description: 退款成功
+ *         description: 退款申請成功，正在處理退款中
  *         content:
  *           application/json:
  *             schema:
@@ -169,20 +179,47 @@ router.post("/:orderId/payment-callback", errorAsync(orderController.postPayment
  *                   example: success
  *                 message:
  *                   type: string
- *                   example: 退款成功
+ *                   example: 退款申請已送出，正在處理退款
  *                 data:
  *                   type: object
  *                   properties:
- *                     orderId:
- *                       type: string
- *                       format: uuid
- *                       example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
- *                     refundedAt:
- *                       type: string
- *                       format: date-time
- *                       example: "2025-07-23T07:15:00.000Z"
+ *                     orderInfo:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           example: "d7353c4f-091e-4d79-b378-d5e6f9846219"
+ *                         status:
+ *                           type: string
+ *                           example: "Refunding"
+ *                         refundAmount:
+ *                           type: number
+ *                           example: 1000
+ *                         refundedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2025-07-23T07:15:00.000Z"
+ *                     orderPay:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           example: "a8f5f167-f44f-47bf-beca-94efb3e6bb76"
+ *                         paidAmount:
+ *                           type: number
+ *                           example: 3000
+ *                         refundAmount:
+ *                           type: number
+ *                           example: 1000
+ *                         refundedAt:
+ *                           type: string
+ *                           format: date-time
+ *                           nullable: true
+ *                           example: null
  *       400:
- *         description: 無法退款（可能已退款或狀態不符合）
+ *         description: 退款失敗（可能已退款或狀態不符合）
  *         content:
  *           application/json:
  *             schema:
@@ -210,7 +247,7 @@ router.post("/:orderId/payment-callback", errorAsync(orderController.postPayment
  *       500:
  *         description: 伺服器錯誤
  */
-router.post("/:orderId/refund", errorAsync(orderController.postPaymentRefund));
+router.post("/:orderId/refund", errorAsync(orderController.refundPayment));
 
 router.get("/", checkAuth, errorAsync(orderController.getMemberOrder));
 

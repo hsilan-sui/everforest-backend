@@ -33,6 +33,10 @@ module.exports = new EntitySchema({
       type: "timestamptz",
       nullable: true,
     },
+    refund_amount: {
+      type: "integer",
+      nullable: true,
+    },
     refund_at: {
       type: "timestamptz",
       nullable: true,
@@ -49,10 +53,9 @@ module.exports = new EntitySchema({
   },
   relations: {
     orderInfoBox: {
-      type: "one-to-one",
+      type: "one-to-many",
       target: "OrderInfo",
-      joinColumn: { name: "order_info_id" },
-      onDelete: "CASCADE", // 當訂單被刪除時，支付資訊也會被刪除
+      inverseSide: "orderPayBox",
     },
   },
 });
