@@ -7,6 +7,8 @@ const errorAsync = require("../utils/errorAsync");
 
 const eventController = require("../controllers/eventController");
 
+router.get("/favorites", checkAuth, errorAsync(eventController.getEventFavorites));
+
 /**
  * @swagger
  * tags:
@@ -1055,5 +1057,15 @@ router.get("/", errorAsync(eventController.getEvents));
  *                   example: 伺服器錯誤，請稍後再試
  */
 router.get("/map/live_map", errorAsync(eventController.getLiveMapEvents));
+
+// eventId = eventInfoId
+
+router.post("/:eventId/comments", checkAuth, errorAsync(eventController.postEventComment));
+
+router.get("/:eventId/comments", errorAsync(eventController.getEventComment));
+
+router.delete("/:eventId/favorites", checkAuth, errorAsync(eventController.deleteEventFavorite));
+
+router.post("/:eventId/favorites", checkAuth, errorAsync(eventController.postEventFavorite));
 
 module.exports = router;

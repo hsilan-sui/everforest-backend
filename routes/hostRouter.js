@@ -629,4 +629,13 @@ router.post(
   errorAsync(hostController.editHostCover)
 );
 
+router.get("/events", checkAuth, restrictTo("host"), errorAsync(hostController.getHostEvents));
+
+router.get(
+  "/events/:eventid/comment",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(hostController.getEventCommentsByHost)
+);
+
 module.exports = router;

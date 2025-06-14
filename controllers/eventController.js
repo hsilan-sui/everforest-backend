@@ -1231,6 +1231,248 @@ const eventController = {
       data: { events },
     });
   },
+  //會員新增留言
+  async postEventComment(req, res, next) {
+    const memberId = req.user.id;
+    const eventId = req.params.eventId;
+    const { rating, description } = req.body;
+
+    if (!memberId) return next(appError(401, "請先登入會員"));
+    if (!eventId || rating === null || !description) {
+      return next(appError(400, "缺少必要欄位"));
+    }
+    if (rating < 1 || rating > 5) {
+      return next(appError(400, "評分請介於 1 到 5 之間"));
+    }
+
+    try {
+      const event = await dataSource.getRepository("EventInfo").findOne({
+        where: { id: eventId },
+        relations: { hostBox: true },
+      });
+      if (!event) return next(appError(404, "查無此活動"));
+
+      const commentRepo = dataSource.getRepository("EventComment");
+      const hasCommented = await commentRepo.findOneBy({
+        event_info_id: eventId,
+        member_info_id: memberId,
+      });
+      if (hasCommented) {
+        return next(appError(409, "您已對此活動發表過評論"));
+      }
+
+      const newComment = commentRepo.create({
+        event_info_id: eventId,
+        member_info_id: memberId,
+        rating,
+        description,
+      });
+      await commentRepo.save(newComment);
+
+      return res.status(201).json({
+        status: "success",
+        message: "評論成功",
+        data: {
+          comment_id: newComment.id,
+          event_id: eventId,
+          event_title: event.title,
+          member_id: memberId,
+          rating: newComment.rating,
+          description: newComment.description,
+          created_at: newComment.created_at,
+        },
+      });
+    } catch (error) {
+      logger.error("新增評論失敗", error);
+      return next(appError(500, "伺服器錯誤，無法新增評論"));
+    }
+  },
+  //匿名在可看到留言，不需登入
+  async getEventComment(req, res, next) {
+    const eventId = req.params.eventId;
+
+    if (!eventId) {
+      return next(appError(400, "缺少活動 ID"));
+    }
+
+    try {
+      // 1. 確認活動存在並取 title
+      const event = await dataSource.getRepository("EventInfo").findOne({
+        where: { id: eventId },
+        select: ["id", "title"],
+      });
+      if (!event) {
+        return next(appError(404, "查無此活動"));
+      }
+
+      const comments = await dataSource.getRepository("EventComment").find({
+        where: { event_info_id: eventId },
+        relations: { memberBox: true },
+        order: { created_at: "DESC" },
+      });
+
+      const formatted = comments.map((c) => ({
+        comment_id: c.id,
+        member_id: c.member_info_id,
+        member_name: c.memberBox?.name || "匿名會員",
+        rating: c.rating,
+        description: c.description,
+        created_at: c.created_at,
+      }));
+
+      // 4. 回傳
+      return res.status(200).json({
+        message: "取得活動評論成功",
+        status: true,
+        data: {
+          event_id: event.id,
+          title: event.title,
+          comments: formatted,
+        },
+      });
+    } catch {
+      return next(appError(500, "伺服器錯誤，無法取得評論"));
+    }
+  },
+
+  async postEventFavorite(req, res, next) {
+    const memberId = req.user?.id;
+    const eventInfoId = req.params.eventId;
+    const { event_plan_id } = req.body;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+    if (!eventInfoId || !event_plan_id) {
+      return next(appError(400, "缺少必要欄位 eventId 或 planId"));
+    }
+
+    try {
+      const plan = await dataSource.getRepository("EventPlan").findOne({
+        where: { id: event_plan_id },
+        relations: ["eventBox"],
+      });
+      if (!plan) {
+        return next(appError(404, "找不到該方案"));
+      }
+      if (plan.eventBox.id !== eventInfoId) {
+        return next(appError(400, "此方案不屬於指定活動"));
+      }
+
+      const favRepo = dataSource.getRepository("EventFavorite");
+      const exists = await favRepo.findOneBy({
+        member_info_id: memberId,
+        event_info_id: eventInfoId,
+        event_plan_id: event_plan_id,
+      });
+      if (exists) {
+        return next(appError(409, "此活動方案已加入最愛"));
+      }
+
+      const favorite = favRepo.create({
+        member_info_id: memberId,
+        event_info_id: eventInfoId,
+        event_plan_id: event_plan_id,
+      });
+      await favRepo.save(favorite);
+
+      return res.status(201).json({
+        status: true,
+        message: "已成功加入我的最愛",
+        data: {
+          favorite_id: favorite.id,
+          event_Info_id: eventInfoId,
+          event_Plan_Id: event_plan_id,
+          member_Info_id: memberId,
+          created_at: favorite.created_at,
+        },
+      });
+    } catch {
+      return next(appError(500, "伺服器錯誤，無法新增收藏"));
+    }
+  },
+
+  async getEventFavorites(req, res, next) {
+    const memberId = req.user?.id;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    try {
+      const favRepo = dataSource.getRepository("EventFavorite");
+
+      const favorites = await favRepo.find({
+        where: { member_info_id: memberId },
+        relations: ["eventBox", "eventPlanBox"],
+        order: { created_at: "DESC" },
+      });
+
+      const result = favorites.map((fav) => ({
+        favorite_id: fav.id,
+        event_info: {
+          id: fav.eventBox.id,
+          title: fav.eventBox.title,
+        },
+        event_plan: {
+          id: fav.eventPlanBox.id,
+          title: fav.eventPlanBox.title,
+          price: fav.eventPlanBox.price,
+          discounted_price: fav.eventPlanBox.discounted_price,
+        },
+      }));
+
+      return res.status(200).json({
+        status: "success",
+        message: "成功取得我的最愛",
+        data: {
+          favorites: result,
+        },
+      });
+    } catch {
+      return next(appError(500, "伺服器錯誤，無法取得我的最愛清單"));
+    }
+  },
+
+  async deleteEventFavorite(req, res, next) {
+    const memberId = req.user?.id;
+    const eventInfoId = req.params.eventId;
+    const { event_plan_id } = req.body;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    if (!eventInfoId || !event_plan_id) {
+      return next(appError(400, "缺少必要欄位 eventId 或 event_plan_id"));
+    }
+
+    try {
+      const favRepo = dataSource.getRepository("EventFavorite");
+
+      const result = await favRepo.delete({
+        member_info_id: memberId,
+        event_info_id: eventInfoId,
+        event_plan_id: event_plan_id,
+      });
+
+      if (result.affected === 0) {
+        return next(appError(404, "找不到對應的收藏紀錄"));
+      }
+
+      return res.status(200).json({
+        status: "success",
+        message: "已成功取消我的最愛",
+        data: {
+          event_info_id: eventInfoId,
+          event_plan_id: event_plan_id,
+          member_info_id: memberId,
+        },
+      });
+    } catch {
+      return next(appError(500, "取消收藏失敗"));
+    }
+  },
 };
 
 module.exports = eventController;
