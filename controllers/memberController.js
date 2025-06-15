@@ -66,11 +66,11 @@ const memberController = {
       return next(appError(400, "欄位未填寫正確"));
     }
 
-    existMember.firstname = firstname;
-    existMember.lastname = lastname;
-    existMember.gender = gender;
-    existMember.birth = new Date(birth); // 確保 birth 被轉換為 Date 類型
-    existMember.photo_url = photo_url;
+    if (firstname) existMember.firstname = firstname;
+    if (lastname) existMember.lastname = lastname;
+    if (gender) existMember.gender = gender;
+    if (birth) existMember.birth = new Date(birth); // 確保 birth 被轉換為 Date 類型
+    if (photo_url) existMember.photo_url = photo_url;
 
     await memberInfo.save(existMember);
 
