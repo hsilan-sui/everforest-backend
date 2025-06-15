@@ -249,16 +249,523 @@ router.post("/payment-callback", errorAsync(orderController.postPaymentCallback)
  */
 router.post("/:orderId/refund", errorAsync(orderController.refundPayment));
 
+/**
+ * @swagger
+ * /api/v1/member/orders:
+ *   get:
+ *     summary: 取得會員所有訂單（可選擇 status 篩選）
+ *     description: 回傳該會員的所有訂單資料，支援用 query string 篩選狀態（例如：status=Paid,Unpaid）
+ *     tags:
+ *       - Member Orders
+ *     security:
+ *       - bearerAuth: []  # 需登入驗證
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           example: Paid,Cancelled
+ *         description: 用逗號分隔的狀態列表，例如 Paid,Cancelled
+ *     responses:
+ *       200:
+ *         description: 會員訂單取得成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 會員訂單取得成功
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: 123e4567-e89b-12d3-a456-426614174000
+ *                           status:
+ *                             type: string
+ *                             example: Paid
+ *                           event_info:
+ *                             type: object
+ *                             properties:
+ *                               id: { type: string }
+ *                               name: { type: string }
+ *                               date: { type: string, format: date-time }
+ *                               image: { type: string, format: uri }
+ *                           event_plan:
+ *                             type: object
+ *                             properties:
+ *                               id: { type: string }
+ *                               title: { type: string }
+ *                               price: { type: integer }
+ *                           quantity:
+ *                             type: integer
+ *                             example: 2
+ *                           total_price:
+ *                             type: integer
+ *                             example: 1000
+ *                           book_at:
+ *                             type: string
+ *                             format: date-time
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                           event_addons:
+ *                             type: array
+ *                             items: {}
+ *       400:
+ *         description: 無效的 status 參數
+ *       401:
+ *         description: 未登入或權限不足
+ *       500:
+ *         description: 伺服器錯誤
+ */
 router.get("/", checkAuth, errorAsync(orderController.getMemberOrder));
 
+/**
+ * @swagger
+ * /api/v1/member/orders/status/{status}:
+ *   get:
+ *     summary: 依狀態查詢會員訂單
+ *     description: 可依指定的 status 值（例如：Paid、Cancelled）取得符合條件的訂單
+ *     tags:
+ *       - Member Orders
+ *     security:
+ *       - bearerAuth: []  # 需登入驗證
+ *     parameters:
+ *       - in: path
+ *         name: status
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: Paid,Cancelled
+ *         description: 以逗號分隔的狀態值（例如 Paid,Unpaid,Cancelled）
+ *     responses:
+ *       200:
+ *         description: 訂單查詢成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 會員訂單取得成功
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           status:
+ *                             type: string
+ *                             example: Paid
+ *                           event_info:
+ *                             type: object
+ *                             properties:
+ *                               id: { type: string }
+ *                               name: { type: string }
+ *                               date: { type: string, format: date-time }
+ *                               image: { type: string, format: uri }
+ *                           event_plan:
+ *                             type: object
+ *                             properties:
+ *                               id: { type: string }
+ *                               title: { type: string }
+ *                               price: { type: integer }
+ *                           quantity:
+ *                             type: integer
+ *                           total_price:
+ *                             type: integer
+ *                           book_at:
+ *                             type: string
+ *                             format: date-time
+ *                           created_at:
+ *                             type: string
+ *                             format: date-time
+ *                           event_addons:
+ *                             type: array
+ *                             items: {}
+ *       400:
+ *         description: 無效的 status 參數
+ *       401:
+ *         description: 未登入或未授權
+ *       500:
+ *         description: 查詢失敗（伺服器錯誤）
+ */
+router.get("/status/:status", checkAuth, errorAsync(orderController.getMemberOrder));
+
+/**
+ * @swagger
+ * /api/v1/member/orders:
+ *   post:
+ *     summary: 建立會員訂單
+ *     description: 建立一筆新訂單，需提供活動方案 ID、數量、加購項目等資訊
+ *     tags:
+ *       - Member Orders
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - event_plan_id
+ *               - quantity
+ *               - total_price
+ *             properties:
+ *               event_plan_id:
+ *                 type: string
+ *                 format: uuid
+ *                 example: d3a9fabc-1e34-4cd9-97f2-521c75f0cb47
+ *               quantity:
+ *                 type: integer
+ *                 example: 2
+ *               total_price:
+ *                 type: integer
+ *                 example: 2000
+ *               event_addons:
+ *                 type: array
+ *                 description: 選填的加購項目（若有）
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: addon-123
+ *                     quantity:
+ *                       type: integer
+ *                       example: 1
+ *     responses:
+ *       201:
+ *         description: 訂單建立成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 訂單已成功建立
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order_id:
+ *                       type: string
+ *                       format: uuid
+ *       400:
+ *         description: 請求資料錯誤（欄位缺失或格式錯誤）
+ *       401:
+ *         description: 未登入
+ *       500:
+ *         description: 建立訂單失敗
+ */
 router.post("/", checkAuth, errorAsync(orderController.postMemberOrder));
 
+/**
+ * @swagger
+ * /api/v1/member/orders/{orderid}:
+ *   patch:
+ *     summary: 修改會員訂單資訊
+ *     description: 允許會員更新訂單資料，例如狀態或加購項目等（依照實作限制更新項目）
+ *     tags:
+ *       - Member Orders
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: 訂單 ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 description: 要更新的訂單狀態（例如 Paid, Cancelled）
+ *                 example: Cancelled
+ *               cancellation_reason:
+ *                 type: string
+ *                 description: 若取消，請填寫取消原因
+ *                 example: 用戶自行取消
+ *               event_addons:
+ *                 type: array
+ *                 description: 變更後的加購項目（若允許修改）
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     quantity:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: 訂單更新成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 訂單已成功更新
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order_id:
+ *                       type: string
+ *       400:
+ *         description: 格式錯誤或不允許的變更
+ *       401:
+ *         description: 未登入或無權限
+ *       404:
+ *         description: 找不到該筆訂單
+ *       500:
+ *         description: 更新失敗（伺服器錯誤）
+ */
 router.patch("/:orderid", checkAuth, errorAsync(orderController.patchMemberOrder));
 
+/**
+ * @swagger
+ * /api/v1/member/orders/{orderid}:
+ *   delete:
+ *     summary: 刪除會員訂單
+ *     description: 允許會員刪除尚未付款或取消的訂單。不可刪除已付款或已處理中的訂單。
+ *     tags:
+ *       - Member Orders
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: 訂單 ID
+ *     responses:
+ *       200:
+ *         description: 訂單刪除成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 訂單已成功刪除
+ *       400:
+ *         description: 不可刪除該訂單（例如已付款）
+ *       401:
+ *         description: 未登入或無權限
+ *       404:
+ *         description: 找不到該筆訂單
+ *       500:
+ *         description: 刪除失敗（伺服器錯誤）
+ */
 router.delete("/:orderid", checkAuth, errorAsync(orderController.deleteMemberOrder));
 
+/**
+ * @swagger
+ * /api/v1/member/orders/{orderid}/ticket:
+ *   post:
+ *     summary: 寄送票券到會員信箱
+ *     description: 根據指定的訂單 ID，將票券資訊寄送至會員註冊的信箱。
+ *     tags:
+ *       - Member Orders
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: 訂單 ID
+ *     responses:
+ *       200:
+ *         description: 票券已成功寄送至信箱
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 票券已寄送至您的信箱
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           ticket_code:
+ *                             type: string
+ *                           event_title:
+ *                             type: string
+ *                           order_id:
+ *                             type: string
+ *                           quantity:
+ *                             type: integer
+ *                           total_price:
+ *                             type: integer
+ *                           issued_at:
+ *                             type: string
+ *                             format: date-time
+ *                           qr_image_url:
+ *                             type: string
+ *                             format: uri
+ *                           event_plan:
+ *                             type: object
+ *                             properties:
+ *                               title:
+ *                                 type: string
+ *                               price:
+ *                                 type: integer
+ *                               description:
+ *                                 type: string
+ *                           event_addons:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *       400:
+ *         description: 找不到會員信箱或其他參數錯誤
+ *       401:
+ *         description: 未登入或驗證失敗
+ *       404:
+ *         description: 查無此訂單或票券
+ *       500:
+ *         description: 寄送失敗（伺服器錯誤）
+ */
 router.post("/:orderid/ticket", checkAuth, errorAsync(orderController.postOrderTicket));
 
+/**
+ * @swagger
+ * /api/v1/member/orders/{orderid}/ticket/{ticketid}:
+ *   get:
+ *     summary: 查詢並寄送單張票券
+ *     description: 根據指定的訂單 ID 與票券 ID，查詢票券資訊並寄送至會員信箱。
+ *     tags:
+ *       - Member Orders
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: 訂單 ID
+ *       - in: path
+ *         name: ticketid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: 票券 ID
+ *     responses:
+ *       200:
+ *         description: 成功寄送票券資訊
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 票券已寄送至您的信箱
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           ticket_code:
+ *                             type: string
+ *                           event_title:
+ *                             type: string
+ *                           order_id:
+ *                             type: string
+ *                           quantity:
+ *                             type: integer
+ *                           total_price:
+ *                             type: integer
+ *                           issued_at:
+ *                             type: string
+ *                             format: date-time
+ *                           qr_image_url:
+ *                             type: string
+ *                             format: uri
+ *                           event_plan:
+ *                             type: object
+ *                             properties:
+ *                               title:
+ *                                 type: string
+ *                               price:
+ *                                 type: integer
+ *                               description:
+ *                                 type: string
+ *                           event_addons:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *       400:
+ *         description: 找不到會員信箱或參數錯誤
+ *       401:
+ *         description: 未登入或驗證失敗
+ *       404:
+ *         description: 找不到該票券或訂單
+ *       500:
+ *         description: 寄送失敗（伺服器錯誤）
+ */
 router.get("/:orderid/ticket/:ticketid", checkAuth, errorAsync(orderController.getOrderTicket));
 
 module.exports = router;
