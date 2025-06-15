@@ -15,6 +15,7 @@ const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 const os = require("os");
 const { In } = require("typeorm");
 const { sendOrderSuccessEmail } = require("../utils/emailUtils");
+const ALLOWED_STATUSES = ["Unpaid", "Paying", "Paid", "Refunding", "Refunded", "Cancelled"];
 
 const options = {
   OperationMode: "Test", //Test or Production
@@ -254,6 +255,7 @@ const orderController = {
 
   async getMemberOrder(req, res, next) {
     const memberId = req.user?.id;
+    const statusParam = req.params.status || req.query.status;
 
     if (!memberId) {
       return next(appError(401, "請先登入會員"));
@@ -262,8 +264,20 @@ const orderController = {
     const OrderRepo = dataSource.getRepository("OrderInfo");
 
     try {
+      let whereClause = { member_info_id: memberId };
+
+      if (statusParam) {
+        const statusList = statusParam.split(",").map((s) => s.trim());
+        const invalid = statusList.filter((s) => !ALLOWED_STATUSES.includes(s));
+        if (invalid.length > 0) {
+          return next(appError(400, `無效的狀態參數：${invalid.join(", ")}`));
+        }
+
+        whereClause.status = In(statusList);
+      }
+
       const existOrder = await OrderRepo.find({
-        where: { member_info_id: memberId },
+        where: whereClause,
         relations: {
           eventPlanBox: {
             eventBox: {
@@ -301,6 +315,7 @@ const orderController = {
           book_at: order.book_at,
           created_at: order.created_at,
           event_addons: order.event_addons || [],
+          status: order.status,
         };
       });
 
