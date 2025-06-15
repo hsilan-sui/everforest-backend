@@ -18,6 +18,10 @@ module.exports = new EntitySchema({
       type: "uuid",
       nullable: false,
     },
+    order_pay_id: {
+      type: "uuid",
+      nullable: true,
+    },
     status: {
       type: "enum",
       enum: ["Unpaid", "Paying", "Paid", "Refunding", "Refunded", "Cancelled"],
@@ -35,7 +39,14 @@ module.exports = new EntitySchema({
     merchantTradeNo: {
       type: "varchar",
       length: 20,
-      unique: true,
+      nullable: true,
+    },
+    refund_amount: {
+      type: "integer",
+      nullable: true,
+    },
+    refund_at: {
+      type: "timestamptz",
       nullable: true,
     },
     cancelled_at: {
@@ -88,10 +99,11 @@ module.exports = new EntitySchema({
       onDelete: "CASCADE",
     },
     orderPayBox: {
-      type: "one-to-one",
+      type: "many-to-one",
       target: "OrderPay",
-      inverseSide: "orderInfoBox",
-      cascade: true,
+      joinColumn: { name: "order_pay_id" },
+      nullable: true,
+      onDelete: "SET NULL",
     },
     orderTicketBox: {
       type: "one-to-many",
