@@ -366,6 +366,139 @@ const hostController = {
       },
     });
   },
+
+  async getHostEvents(req, res, next) {
+    const memberId = req.user.id;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+
+    try {
+      const hostRepo = dataSource.getRepository("HostInfo");
+
+      const host = await hostRepo.findOneBy({ member_info_id: memberId });
+      if (!host) {
+        return next(appError(404, "尚未建立主辦方資料"));
+      }
+
+      const eventRepo = dataSource.getRepository("EventInfo");
+      const events = await eventRepo.find({
+        where: { host_info_id: host.id },
+        relations: {
+          eventTagInfoBox: true,
+          eventNoticeBox: true,
+          eventPhotoBox: true,
+        },
+        order: { created_at: "DESC" },
+      });
+
+      const formattedEvents = events.map((event) => ({
+        event_id: event.id,
+        active:
+          event.active === "draft"
+            ? "草稿"
+            : event.active === "published"
+              ? "已發佈"
+              : event.active === "archived"
+                ? "已下架"
+                : event.active,
+        publish_at: event.registration_open_time ?? null,
+        title: event.title,
+        address: event.address,
+        latitude: event.latitude?.toString() ?? null,
+        longtitude: event.longitude?.toString() ?? null,
+        description: event.description,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        max_participants: event.max_participants,
+        cancel_policy: event.cancel_policy,
+        tags: event.eventTagInfoBox.map((tag) => tag.tag_name),
+        notices: event.eventNoticeBox.map((notice) => ({
+          type: notice.type,
+          content: notice.content,
+        })),
+        photos: event.eventPhotoBox.map((photo) => ({
+          id: photo.id,
+          url: photo.photo_url,
+          description: photo.description,
+        })),
+      }));
+
+      return res.status(200).json({
+        status: "success",
+        message: "取得主辦方活動成功",
+        data: {
+          host_id: host.id,
+          event: formattedEvents,
+        },
+      });
+    } catch (error) {
+      logger.error("取得主辦方活動錯誤", error);
+      return next(appError(500, "伺服器錯誤，無法取得主辦活動"));
+    }
+  },
+
+  async getEventCommentsByHost(req, res, next) {
+    const memberId = req.user.id;
+    const eventId = req.params.eventid;
+
+    if (!memberId) {
+      return next(appError(401, "請先登入會員"));
+    }
+    if (!eventId) {
+      return next(appError(400, "缺少活動 ID"));
+    }
+
+    try {
+      const eventRepo = dataSource.getRepository("EventInfo");
+
+      // 查詢活動並驗證主辦權限
+      const event = await eventRepo.findOne({
+        where: { id: eventId },
+        relations: { hostBox: true },
+      });
+
+      if (!event) {
+        return next(appError(404, "查無此活動"));
+      }
+
+      if (event.hostBox.member_info_id !== memberId) {
+        return next(appError(403, "無權限查閱此活動的留言"));
+      }
+
+      // 查詢會員對該活動的留言
+      const commentRepo = dataSource.getRepository("EventComment");
+
+      const comments = await commentRepo.find({
+        where: { event_info_id: eventId },
+        relations: { memberBox: true },
+        order: { created_at: "DESC" },
+      });
+
+      const formattedComments = comments.map((comment) => ({
+        comment_id: comment.id,
+        member_id: comment.member_info_id,
+        member_name: comment.memberBox?.name || "匿名會員",
+        rating: comment.rating,
+        description: comment.description,
+        created_at: comment.created_at,
+      }));
+
+      return res.status(200).json({
+        status: "success",
+        message: "取得活動留言成功",
+        data: {
+          event_info_id: eventId,
+          event_title: event.title,
+          comments: formattedComments,
+        },
+      });
+    } catch (error) {
+      logger.error("主辦方取得活動留言失敗", error);
+      return next(appError(500, "伺服器錯誤，無法取得留言"));
+    }
+  },
 };
 
 module.exports = hostController;
