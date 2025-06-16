@@ -212,22 +212,29 @@ const orderController = {
     // 1 分鐘後才變成 refunded
     setTimeout(async () => {
       try {
-        order.status = "Refunded";
-        order.refund_amount = order.total_price;
-        order.refund_at = new Date();
-        await orderRepo.save(order);
+        const freshOrder = await orderRepo.findOne({ where: { id: orderId } });
+        freshOrder.status = "Refunded";
+        freshOrder.refund_amount = freshOrder.total_price;
+        freshOrder.refund_at = new Date();
+        await orderRepo.save(freshOrder);
 
         // 計算該付款紀錄已退款訂單的退款金額總和
         const refundedOrders = await orderRepo.find({
-          where: { order_pay_id: payRecord.id, status: "Refunded" },
+          where: { order_pay_id: freshOrder.order_pay_id, status: "Refunded" },
         });
         const totalRefunded = refundedOrders.reduce((sum, o) => sum + (o.refund_amount || 0), 0);
-
-        payRecord.refund_amount = totalRefunded;
-        if (payRecord.refund_amount >= payRecord.amount) {
-          payRecord.refund_at = new Date();
+        const freshPayRecord = await orderPayRepo.findOne({
+          where: { id: freshOrder.order_pay_id },
+        });
+        if (!freshPayRecord) {
+          console.warn("付款紀錄不存在");
+          return;
         }
-        await orderPayRepo.save(payRecord);
+        freshPayRecord.refund_amount = totalRefunded;
+        if (freshPayRecord.refund_amount >= freshPayRecord.amount) {
+          freshPayRecord.refund_at = new Date();
+        }
+        await orderPayRepo.save(freshPayRecord);
       } catch (error) {
         console.warn("退款狀態更新失敗:", error);
       }
