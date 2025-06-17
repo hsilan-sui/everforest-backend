@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
  */
 exports.sendResetPasswordEmail = async (toEmail, resetLink) => {
   const mailOptions = {
-    from: `"露營活動平台" <${process.env.EMAIL_USER}>`,
+    from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
     to: toEmail,
     subject: "🔐 密碼重設通知",
     html: `
@@ -68,7 +68,7 @@ exports.sendResetPasswordEmail = async (toEmail, resetLink) => {
       </p>
 
       <p style="text-align: left; font-size: 12px; color: #bbb; margin-top: 32px;">
-        🌲 森森不息團隊敬上
+        🌲 森森不息團隊 🌲 敬上
       </p>
 
       <p style="font-size: 11px; color: #ccc; margin-top: 40px;">
@@ -99,28 +99,80 @@ exports.sendResetPasswordEmail = async (toEmail, resetLink) => {
  */
 exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
   const htmlContent = `
-    <p>您好，</p>
-    <p>您已成功預訂以下露營活動：</p>
-    <ul>
+<div style="
+  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  line-height: 1.8;
+  border: 1px solid #d8e4dc;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #fff0f5;
+  text-align: center;
+  color: #2c3e50;
+">
+  <img src="https://i.postimg.cc/nLjKzHRQ/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+
+  <h2 style="color: #28a745; margin-bottom: 16px;">🌿 訂單成立通知</h2>
+
+  <p style="text-align: left;">親愛的用戶您好 🌱，</p>
+  <p style="text-align: left;">✅ 您已成功預訂以下露營活動：</p>
+
+  <div style="display: inline-block; text-align: left; margin: 16px auto; border: 1px solid #d8e4dc;
+  border-radius: 16px; padding: 16px;">
+    <ul style="padding-left: 20px; margin: 0;">
       ${orderList
         .map(
           (order) => `
-        <li>
-          活動：${order.activityName}<br/>
-          日期：${order.date}<br/>
-          金額：${order.amount} 元
-        </li>
+      <li style="margin-bottom: 12px;">
+        <strong>🌲 活動：</strong>${order.activityName}<br />
+        <strong>📅 日期：</strong>${order.date}<br />
+        <strong>💰 金額：</strong>${order.amount} 元
+      </li>
       `
         )
         .join("")}
     </ul>
-    <p>我們期待與您一同共度美好時光！</p>
+  </div>
+
+  <p style="text-align: left;">我們期待與您共度一段美好的自然時光！🧭</p>
+
+  <p style="font-size: 13px; color: #888; text-align: left; margin-top: 32px;">
+    💌 若您對訂單有任何疑問，請聯絡客服信箱：<a href="mailto:service@everforest.tw" style="color: #28a745;">service@everforest.tw</a>
+  </p>
+
+  <p style="font-size: 12px; color: #bbb; text-align: left; margin-top: 24px;">
+    🌳 森森不息團隊敬上 🌳
+  </p>
+
+  <p style="font-size: 11px; color: #ccc; margin-top: 40px;">
+    © 2025 森森不息 | 本郵件由系統自動發送，請勿直接回覆。
+  </p>
+</div>
   `;
+  // const htmlContent = `
+  //   <p>您好，</p>
+  //   <p>您已成功預訂以下露營活動：</p>
+  //   <ul>
+  //     ${orderList
+  //       .map(
+  //         (order) => `
+  //       <li>
+  //         活動：${order.activityName}<br/>
+  //         日期：${order.date}<br/>
+  //         金額：${order.amount} 元
+  //       </li>
+  //     `
+  //       )
+  //       .join("")}
+  //   </ul>
+  //   <p>我們期待與您一同共度美好時光！</p>
+  // `;
 
   const mailOptions = {
-    from: `"露營活動平台" <${process.env.EMAIL_USER}>`,
+    from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
     to: toEmail,
-    subject: "森森不息 - 訂單成功通知",
+    subject: "🔔 露營訂單中心 - 訂單成功通知",
     html: htmlContent,
   };
 
@@ -135,17 +187,64 @@ exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
  */
 exports.sendTicketEmail = async ({ toEmail, orderId, ticketCode, eventTitle, qrImageUrl }) => {
   const mailOptions = {
-    from: `"活動票券中心" <${process.env.EMAIL_USER}>`,
+    from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
     to: toEmail,
-    subject: "您的活動票券資訊",
+    subject: "💌 露營活動票券中心-您的活動票券資訊",
     html: `
-      <p>親愛的會員您好，</p>
-      <p>以下是您訂單 <b>${orderId}</b> 的票券資訊：</p>
-      <p><b>票券代碼：</b>${ticketCode}</p>
-      <p><b>活動名稱：</b>${eventTitle}</p>
-      <p><img src="${qrImageUrl}" alt="QRCode" width="240"/></p>
-      <p><a href="${qrImageUrl}">若無法顯示請點此開啟 QRCode</a></p>
+    <div style="
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      line-height: 1.8;
+      border: 1px solid #eaf4ff;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #eaf4ff;
+      text-align: center;
+      color: #5a2b43;
+    ">
+      <img src="https://i.postimg.cc/nLjKzHRQ/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+
+      <h2 style="color: #e75480; margin-bottom: 16px;">🎟️ 您的露營票券已送達！</h2>
+
+      <p style="text-align: left;">親愛的會員您好 🌟，</p>
+      <p style="text-align: left;">
+        以下是您訂單 <strong>🧾 ${orderId}</strong> 的票券資訊，請妥善保存：
+      </p>
+
+      <ul style="text-align: left; padding-left: 20px; margin-top: 16px;">
+        <li><strong>🔐 票券代碼：</strong>${ticketCode}</li>
+        <li><strong>🏕️ 活動名稱：</strong>${eventTitle}</li>
+      </ul>
+
+      <p style="margin: 24px 0;">📷 請攜帶以下 QRCode 入場：</p>
+      <img src="${qrImageUrl}" alt="QRCode" style="max-width: 240px; border-radius: 12px; box-shadow: 0 0 8px rgba(0,0,0,0.1);" />
+
+      <p style="font-size: 13px; color: #888; margin-top: 8px;">
+        📎 <a href="${qrImageUrl}" style="color: #d63384;">無法顯示時請點我開啟 QRCode</a>
+      </p>
+
+      <p style="text-align: left; font-size: 13px; color: #999; margin-top: 24px;">
+        若有任何問題，歡迎來信 <a href="mailto:service@everforest.tw" style="color: #e75480;">service@everforest.tw</a>
+      </p>
+
+      <p style="text-align: left; font-size: 12px; color: #bbb; margin-top: 28px;">
+        🌷 森森不息票券中心 🌷 敬上
+      </p>
+
+      <p style="font-size: 11px; color: #ccc; margin-top: 40px;">
+        © 2025 森森不息 | 本郵件由系統自動發送，請勿直接回覆。
+      </p>
+    </div>
     `,
+    // html: `
+    //   <p>親愛的會員您好，</p>
+    //   <p>以下是您訂單 <b>${orderId}</b> 的票券資訊：</p>
+    //   <p><b>票券代碼：</b>${ticketCode}</p>
+    //   <p><b>活動名稱：</b>${eventTitle}</p>
+    //   <p><img src="${qrImageUrl}" alt="QRCode" width="240"/></p>
+    //   <p><a href="${qrImageUrl}">若無法顯示請點此開啟 QRCode</a></p>
+    // `,
   };
 
   await transporter
