@@ -74,3 +74,27 @@ exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
     .then((info) => console.warn("訂單通知信寄出成功：", info.response))
     .catch((error) => console.error("訂單通知信寄送失敗：", error));
 };
+
+/**
+ * 寄送訂單票券(QRCODE)
+ */
+exports.sendTicketEmail = async ({ toEmail, orderId, ticketCode, eventTitle, qrImageUrl }) => {
+  const mailOptions = {
+    from: `"活動票券中心" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject: "您的活動票券資訊",
+    html: `
+      <p>親愛的會員您好，</p>
+      <p>以下是您訂單 <b>${orderId}</b> 的票券資訊：</p>
+      <p><b>票券代碼：</b>${ticketCode}</p>
+      <p><b>活動名稱：</b>${eventTitle}</p>
+      <p><img src="${qrImageUrl}" alt="QRCode" width="240"/></p>
+      <p><a href="${qrImageUrl}">若無法顯示請點此開啟 QRCode</a></p>
+    `,
+  };
+
+  await transporter
+    .sendMail(mailOptions)
+    .then((info) => console.warn("票券信件寄出成功：", info.response))
+    .catch((error) => console.error("票券信件寄送失敗：", error));
+};
