@@ -352,6 +352,7 @@ const authController = {
         role: member.role,
         email,
         googleId,
+        username: member.username,
         name,
         picture,
       };
