@@ -348,6 +348,8 @@ const authController = {
       }
 
       const userPayload = {
+        id: member.id,
+        role: member.role,
         email,
         googleId,
         name,
@@ -379,8 +381,8 @@ const authController = {
       // 重定向到前端頁面
       const redirectURL =
         process.env.NODE_ENV === "production"
-          ? `${process.env.FRONTEND_PRO_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`
-          : `${process.env.FRONTEND_DEV_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`;
+          ? `${process.env.FRONTEND_PRO_ORIGIN}/?access_token=${accessToken}&refresh_token=${refreshToken}`
+          : `${process.env.FRONTEND_DEV_ORIGIN}/?access_token=${accessToken}&refresh_token=${refreshToken}`;
       res.redirect(redirectURL);
     } catch (error) {
       await queryRunner.rollbackTransaction(); // 回滾事務
