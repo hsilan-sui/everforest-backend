@@ -76,6 +76,12 @@ exports.sendResetPasswordEmail = async (toEmail, resetLink) => {
       </p>
     </div>
     `,
+    // html: `
+    //   <p>您好，</p>
+    //   <p>您請求了密碼重設，請點擊以下連結：</p>
+    //   <p><a href="${resetLink}">${resetLink}</a></p>
+    //   <p>此連結將在 <strong>15 分鐘</strong> 後失效。</p>
+    // `,
   };
 
   await transporter
