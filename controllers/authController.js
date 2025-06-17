@@ -348,6 +348,8 @@ const authController = {
       }
 
       const userPayload = {
+        id: member.id,
+        role: member.role,
         email,
         googleId,
         name,
@@ -361,11 +363,26 @@ const authController = {
       // 提交事務
       await queryRunner.commitTransaction();
 
+      res.cookie("access_token", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "None",
+        maxAge: 1000 * 60 * 15, // 15 分鐘
+        path: "/",
+      });
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "None",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
+        path: "/",
+      });
+
       // 重定向到前端頁面
       const redirectURL =
         process.env.NODE_ENV === "production"
-          ? `${process.env.FRONTEND_PRO_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`
-          : `${process.env.FRONTEND_DEV_ORIGIN}/?accessToken=${accessToken}&refreshToken=${refreshToken}`;
+          ? `${process.env.FRONTEND_PRO_ORIGIN}/?access_token=${accessToken}&refresh_token=${refreshToken}`
+          : `${process.env.FRONTEND_DEV_ORIGIN}/?access_token=${accessToken}&refresh_token=${refreshToken}`;
       res.redirect(redirectURL);
     } catch (error) {
       await queryRunner.rollbackTransaction(); // 回滾事務

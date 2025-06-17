@@ -10,11 +10,12 @@ const fs = require("fs").promises;
 const path = require("path");
 const logger = require("../utils/logger")("Order");
 const { Not, IsNull: TypeORMIsNull } = require("typeorm");
-const nodemailer = require("nodemailer");
+
 const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 const os = require("os");
 const { In } = require("typeorm");
 const { sendOrderSuccessEmail } = require("../utils/emailUtils");
+const { sendTicketEmail } = require("../utils/emailUtils");
 const ALLOWED_STATUSES = ["Unpaid", "Paying", "Paid", "Refunding", "Refunded", "Cancelled"];
 
 const options = {
@@ -99,8 +100,8 @@ const orderController = {
         orders.length === 1
           ? orders[0].eventPlanBox.title
           : orders.map((o) => o.eventPlanBox.title).join("#"),
-      ReturnURL: `${process.env.BACKEND_DEV_ORIGIN}/api/v1/member/orders/payment-callback`,
-      ClientBackURL: `${process.env.FRONTEND_DEV_ORIGIN}`,
+      ReturnURL: `${process.env.BACKEND_PRO_ORIGIN}/api/v1/member/orders/payment-callback`,
+      ClientBackURL: `${process.env.FRONTEND_PRO_ORIGIN}/orders/payment-success?MerchantTradeNo=${MerchantTradeNo}`,
       PaymentType: "aio",
       ChoosePayment: "ALL",
       EncryptType: 1,
@@ -212,22 +213,29 @@ const orderController = {
     // 1 分鐘後才變成 refunded
     setTimeout(async () => {
       try {
-        order.status = "Refunded";
-        order.refund_amount = order.total_price;
-        order.refund_at = new Date();
-        await orderRepo.save(order);
+        const freshOrder = await orderRepo.findOne({ where: { id: orderId } });
+        freshOrder.status = "Refunded";
+        freshOrder.refund_amount = freshOrder.total_price;
+        freshOrder.refund_at = new Date();
+        await orderRepo.save(freshOrder);
 
         // 計算該付款紀錄已退款訂單的退款金額總和
         const refundedOrders = await orderRepo.find({
-          where: { order_pay_id: payRecord.id, status: "Refunded" },
+          where: { order_pay_id: freshOrder.order_pay_id, status: "Refunded" },
         });
         const totalRefunded = refundedOrders.reduce((sum, o) => sum + (o.refund_amount || 0), 0);
-
-        payRecord.refund_amount = totalRefunded;
-        if (payRecord.refund_amount >= payRecord.amount) {
-          payRecord.refund_at = new Date();
+        const freshPayRecord = await orderPayRepo.findOne({
+          where: { id: freshOrder.order_pay_id },
+        });
+        if (!freshPayRecord) {
+          console.warn("付款紀錄不存在");
+          return;
         }
-        await orderPayRepo.save(payRecord);
+        freshPayRecord.refund_amount = totalRefunded;
+        if (freshPayRecord.refund_amount >= freshPayRecord.amount) {
+          freshPayRecord.refund_at = new Date();
+        }
+        await orderPayRepo.save(freshPayRecord);
       } catch (error) {
         console.warn("退款狀態更新失敗:", error);
       }
@@ -669,30 +677,13 @@ const orderController = {
         return next(appError(400, "找不到會員信箱"));
       }
 
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
+      await sendTicketEmail({
+        toEmail: memberEmail,
+        orderId,
+        ticketCode: ticket.ticket_code,
+        eventTitle: order.eventPlanBox?.title || "未命名活動",
+        qrImageUrl: ticket.qr_image_url,
       });
-
-      // 設定寄信內容：內嵌 + 附件
-      const mailOptions = {
-        from: `活動票券中心 <${process.env.SMTP_USER}>`,
-        to: memberEmail,
-        subject: "您的活動票券已產生",
-        html: `
-        <p>親愛的會員您好，</p>
-        <p>以下是您訂單 <b>${orderId}</b> 的票券資訊：</p>
-        <p><b>票券代碼：</b>${ticketCode}</p>
-        <p><b>活動名稱：</b>${order.eventPlanBox?.title || "未命名活動"}</p>
-        <p><img src="${imageUrl}" alt="QRCode" width="240"/></p>
-        <p><a href="${imageUrl}">若無法顯示請點此開啟 QRCode</a></p>
-      `,
-      };
-
-      await transporter.sendMail(mailOptions);
 
       res.status(201).json({
         status: "success",
@@ -760,29 +751,14 @@ const orderController = {
         return next(appError(400, "找不到會員信箱"));
       }
 
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
+      await sendTicketEmail({
+        toEmail: memberEmail,
+        orderId,
+        ticketCode: ticket.ticket_code,
+        eventTitle: order.eventPlanBox?.title || "未命名活動",
+        qrImageUrl: ticket.qr_image_url,
       });
 
-      const mailOptions = {
-        from: `活動票券中心 <${process.env.SMTP_USER}>`,
-        to: memberEmail,
-        subject: "您的活動票券資訊",
-        html: `
-        <p>親愛的會員您好，</p>
-        <p>以下是您訂單 <b>${orderId}</b> 的票券資訊：</p>
-        <p><b>票券代碼：</b>${ticket.ticket_code}</p>
-        <p><b>活動名稱：</b>${order.eventPlanBox?.title || "未命名活動"}</p>
-        <p><img src="${ticket.qr_image_uri}" alt="QRCode" width="240"/></p>
-        <p><a href="${ticket.qr_image_uri}">若無法顯示請點此開啟 QRCode</a></p>
-      `,
-      };
-
-      await transporter.sendMail(mailOptions);
       res.status(200).json({
         status: "success",
         message: "票券已寄送至您的信箱",
