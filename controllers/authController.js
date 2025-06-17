@@ -361,6 +361,21 @@ const authController = {
       // 提交事務
       await queryRunner.commitTransaction();
 
+      res.cookie("access_token", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "None",
+        maxAge: 1000 * 60 * 15, // 15 分鐘
+        path: "/",
+      });
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "None",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
+        path: "/",
+      });
+
       // 重定向到前端頁面
       const redirectURL =
         process.env.NODE_ENV === "production"
