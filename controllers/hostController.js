@@ -389,41 +389,64 @@ const hostController = {
           eventTagInfoBox: true,
           eventNoticeBox: true,
           eventPhotoBox: true,
+          orderBox: true,
         },
         order: { created_at: "DESC" },
       });
 
-      const formattedEvents = events.map((event) => ({
-        event_id: event.id,
-        active:
-          event.active === "draft"
-            ? "草稿"
-            : event.active === "published"
-              ? "已發佈"
-              : event.active === "archived"
-                ? "已下架"
-                : event.active,
-        publish_at: event.registration_open_time ?? null,
-        title: event.title,
-        address: event.address,
-        latitude: event.latitude?.toString() ?? null,
-        longtitude: event.longitude?.toString() ?? null,
-        description: event.description,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        max_participants: event.max_participants,
-        cancel_policy: event.cancel_policy,
-        tags: event.eventTagInfoBox.map((tag) => tag.tag_name),
-        notices: event.eventNoticeBox.map((notice) => ({
-          type: notice.type,
-          content: notice.content,
-        })),
-        photos: event.eventPhotoBox.map((photo) => ({
-          id: photo.id,
-          url: photo.photo_url,
-          description: photo.description,
-        })),
-      }));
+      const now = new Date();
+
+      const formattedEvents = events.map((event) => {
+        const totalSignups = event.orderBox?.length || 0; //已報名人數
+        const paidCount = event.orderBox?.filter((o) => o.payment_status === "paid").length || 0; //已繳費人數
+        const isRegistrationOpen =
+          event.registration_open_time <= now &&
+          event.registration_close_time >= now &&
+          paidCount < event.max_participants;
+        //是否能可報名
+        const remainingSlots = event.max_participants - paidCount; //剩下人數
+        //報名完成率（百分比）
+        const signupRate =
+          event.max_participants > 0 ? Math.round((paidCount / event.max_participants) * 100) : 0;
+        return {
+          event_id: event.id,
+          active:
+            event.active === "draft"
+              ? "草稿"
+              : event.active === "published"
+                ? "已發佈"
+                : event.active === "archived"
+                  ? "已下架"
+                  : event.active,
+          publish_at: event.registration_open_time ?? null,
+          title: event.title,
+          address: event.address,
+          latitude: event.latitude?.toString() ?? null,
+          longtitude: event.longitude?.toString() ?? null,
+          description: event.description,
+          start_time: event.start_time,
+          end_time: event.end_time,
+          max_participants: event.max_participants,
+          cancel_policy: event.cancel_policy,
+          registration_open_time: event.registration_open_time,
+          registration_close_time: event.registration_close_time,
+          signup_total: totalSignups,
+          paid_count: paidCount,
+          is_registration_open: isRegistrationOpen,
+          remaining_slots: remainingSlots,
+          signup_rate: signupRate,
+          tags: event.eventTagInfoBox.map((tag) => tag.tag_name),
+          notices: event.eventNoticeBox.map((notice) => ({
+            type: notice.type,
+            content: notice.content,
+          })),
+          photos: event.eventPhotoBox.map((photo) => ({
+            id: photo.id,
+            url: photo.photo_url,
+            description: photo.description,
+          })),
+        };
+      });
 
       return res.status(200).json({
         status: "success",
@@ -434,6 +457,7 @@ const hostController = {
         },
       });
     } catch (error) {
+      console.error("取得主辦方活動錯誤：", error); // ⬅️ 加這行
       logger.error("取得主辦方活動錯誤", error);
       return next(appError(500, "伺服器錯誤，無法取得主辦活動"));
     }
