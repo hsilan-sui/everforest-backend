@@ -904,9 +904,12 @@ const eventController = {
     }
   },
   /**
-   * @description 將活動從草稿(draft)狀態提交上架(published)
+   * @description 主辦方將活動從草稿(draft)狀態提交活動審核(pending)
+   * /**
+   * 提交活動送審：狀態從 draft ➝ pending
+   * 僅限已建立主辦方的會員提交自己的草稿活動
    */
-  async publishEvent(req, res, next) {
+  async submitEvent(req, res, next) {
     const memberId = req.user?.id;
     const { eventId } = req.params;
 
@@ -927,21 +930,30 @@ const eventController = {
       return next(appError(403, "尚未建立主辦方資料"));
     }
 
-    // 新增這段，已上架則拒絕重複上架
     if (event.active === "published") {
       return next(appError(400, "該活動已經上架"));
     }
 
-    if (event.active !== "draft") {
-      return next(appError(400, "先建議草稿活動與詳細資訊，才能上架"));
+    if (event.status === "archived") {
+      return next(appError(400, "該活動已下架"));
     }
 
-    event.active = "published";
+    if (event.active !== "draft") {
+      return next(appError(400, "只有草稿狀態的活動才可以提交審核"));
+    }
+
+    // 檢查是否已填寫完整資訊
+    if (!event.title || !event.start_time || !event.end_time) {
+      return next(appError(400, "請先建立完整活動詳情（含標題與時間）後再提交"));
+    }
+
+    // 成功送審，狀態轉為 pending
+    event.active = "pending";
     await eventRepo.save(event);
 
     return res.status(200).json({
       status: "success",
-      message: "活動成功上架",
+      message: "活動已提交審核，請等待審核結果",
       data: {
         eventId: event.id,
         status: event.active,

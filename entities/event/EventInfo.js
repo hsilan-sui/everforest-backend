@@ -47,7 +47,7 @@ module.exports = new EntitySchema({
     },
     active: {
       type: "enum",
-      enum: ["draft", "published", "archived"],
+      enum: ["draft", "pending", "published", "archived"],
       default: "draft",
       nullable: false,
     },
