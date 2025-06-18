@@ -689,9 +689,9 @@ router.patch(
 
 /**
  * @swagger
- * /api/v1/events/{eventId}/publish:
+ * /api/v1/events/{eventId}/submit:
  *   patch:
- *     summary: 將活動從草稿狀態上架為已發布
+ *     summary: 提交活動送審，將狀態從草稿改為 pending
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
@@ -704,7 +704,7 @@ router.patch(
  *         description: 活動 ID
  *     responses:
  *       200:
- *         description: 活動成功上架
+ *         description: 活動已提交審核，請等待審核結果
  *         content:
  *           application/json:
  *             schema:
@@ -721,18 +721,22 @@ router.patch(
  *                       type: string
  *                     status:
  *                       type: string
- *                       example: published
+ *                       example: pending
  *       400:
- *         description: 活動非草稿狀態或缺少活動 ID
+ *         description: 無法提交活動審核，可能原因如下：
+ *           - 該活動已經上架（published）
+ *           - 該活動已下架（archived）
+ *           - 該活動非草稿狀態（非 draft）
+ *           - 尚未建立活動詳情（缺少必要資訊）
  *       404:
  *         description: 找不到對應的活動
  */
-//提交活動上架 active => draft => published
+//提交活動審核 active => draft => pending
 router.patch(
-  "/:eventId/publish",
+  "/:eventId/submit",
   checkAuth,
   restrictTo("host"),
-  errorAsync(eventController.publishEvent)
+  errorAsync(eventController.submitEvent)
 );
 
 /**
