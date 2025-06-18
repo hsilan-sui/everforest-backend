@@ -14,6 +14,7 @@ const logger = require("../utils/logger")("Event");
 
 const { uploadImageFile, ALLOWED_FILE_TYPES } = require("../utils/uploadImage");
 const { getLatLngByAddress } = require("../utils/geocode");
+const { validateEventSubmissionTime } = require("../utils/validEventUtils");
 
 const eventController = {
   /**
@@ -940,6 +941,13 @@ const eventController = {
 
     if (event.active !== "draft") {
       return next(appError(400, "只有草稿狀態的活動才可以提交審核"));
+    }
+
+    //使用日期防呆過期的活動不能再送審
+    try {
+      validateEventSubmissionTime(event);
+    } catch (error) {
+      return next(error);
     }
 
     // 檢查是否已填寫完整資訊
