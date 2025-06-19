@@ -2,7 +2,9 @@ const { dataSource } = require("../db/data-source");
 const appError = require("../utils/appError");
 
 /**
- * 檢查活動是否處於可編輯狀態（僅 draft,rejected 可編輯）
+
+ * 檢查活動是否處於可編輯狀態（僅 draft、rejected 可編輯，且報名未截止）
+
  */
 
 const EVENT_STATUS_LABELS = {
@@ -34,7 +36,13 @@ const checkEventEditable = async (req, res, next) => {
     return next(appError(403, `活動狀態為『${statusLabel}』，無法進行編輯操作`));
   }
 
-  // 如果需要後面 controller 用到 event，可以掛上 req
+
+  // 報名截止時間已過，禁止編輯
+  const now = new Date();
+  if (event.registration_close_time && new Date(event.registration_close_time) < now) {
+    return next(appError(403, "報名已截止，無法再編輯活動內容"));
+  }
+
   req.event = event;
 
   next();
