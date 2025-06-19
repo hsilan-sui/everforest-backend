@@ -7,6 +7,8 @@ const errorAsync = require("../utils/errorAsync");
 
 const eventController = require("../controllers/eventController");
 
+const checkEventEditable = require("../middlewares/checkEventEditable");
+
 router.get("/favorites", checkAuth, errorAsync(eventController.getEventFavorites));
 
 /**
@@ -344,6 +346,7 @@ router.patch(
   "/:eventId/notices-tags",
   checkAuth,
   restrictTo("host"),
+  checkEventEditable, //根據活動狀態（pending、rejected、published、archived）擋住不能再編輯
   errorAsync(eventController.updateNoticesTags)
 );
 
@@ -465,6 +468,7 @@ router.post(
   "/:eventId/images",
   checkAuth,
   restrictTo("host"),
+  checkEventEditable,
   errorAsync(eventController.uploadEventPhotos)
 );
 
@@ -550,6 +554,7 @@ router.post(
   "/:eventId/plans",
   checkAuth,
   restrictTo("host"),
+  checkEventEditable,
   errorAsync(eventController.createEventPlans)
 );
 
@@ -684,6 +689,7 @@ router.patch(
   "/:eventId/plans",
   checkAuth,
   restrictTo("host"),
+  checkEventEditable,
   errorAsync(eventController.updateEventPlans)
 );
 
