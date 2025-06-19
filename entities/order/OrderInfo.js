@@ -111,5 +111,14 @@ module.exports = new EntitySchema({
       inverseSide: "orderInfoBox",
       cascade: true,
     },
+
+    eventBox: {
+      type: "many-to-one",
+      target: "EventInfo",
+      joinColumn: {
+        name: "event_info_id", // 這是你資料表裡的外鍵欄位名稱
+      },
+      inverseSide: "orderBox",
+    },
   },
 });
