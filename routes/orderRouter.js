@@ -768,4 +768,92 @@ router.post("/:orderid/ticket", checkAuth, errorAsync(orderController.postOrderT
  */
 router.get("/:orderid/ticket/:ticketid", checkAuth, errorAsync(orderController.getOrderTicket));
 
+/**
+ * @swagger
+ * /api/v1/member/orders/verify-ticket:
+ *   post:
+ *     summary: 票券核銷驗證
+ *     description: |
+ *       此 API 用於核銷票券。前端傳入票券代碼 (ticket_code)，
+ *       後端會檢查票券是否存在及狀態，若票券有效，則更新為已使用並回傳成功訊息。
+ *     tags: [Orders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ticket_code
+ *             properties:
+ *               ticket_code:
+ *                 type: string
+ *                 description: 票券代碼
+ *                 example: "F05FFA24FABB4BE29D1D"
+ *     responses:
+ *       200:
+ *         description: 票券成功核銷
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 票券已成功核銷
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     ticket_code:
+ *                       type: string
+ *                       example: "F05FFA24FABB4BE29D1D"
+ *                     used_at:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-06-19T04:56:00.000Z"
+ *       400:
+ *         description: 請求錯誤，票券已使用或其他請求錯誤
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 票券已使用，無法再次核銷
+ *       404:
+ *         description: 找不到票券
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 找不到票券
+ *       500:
+ *         description: 伺服器錯誤，請稍後再試
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: failed
+ *                 message:
+ *                   type: string
+ *                   example: 伺服器錯誤
+ */
+router.post("/verify-ticket", errorAsync(orderController.verifyTicket));
+
 module.exports = router;
