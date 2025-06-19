@@ -47,7 +47,7 @@ module.exports = new EntitySchema({
     },
     active: {
       type: "enum",
-      enum: ["draft", "published", "archived"],
+      enum: ["draft", "pending", "published", "archived"],
       default: "draft",
       nullable: false,
     },
@@ -120,6 +120,12 @@ module.exports = new EntitySchema({
       type: "one-to-many",
       target: "EventComment",
       inverseSide: "eventBox",
+    },
+
+    orderBox: {
+      type: "one-to-many",
+      target: "OrderInfo",
+      inverseSide: "eventBox", // <- 對應 OrderInfo 裡的欄位
     },
   },
 });
