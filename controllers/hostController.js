@@ -369,6 +369,7 @@ const hostController = {
 
   async getHostEvents(req, res, next) {
     const memberId = req.user.id;
+    const tagFilter = req.query.tag;
 
     if (!memberId) {
       return next(appError(401, "請先登入會員"));
@@ -383,17 +384,20 @@ const hostController = {
       }
 
       const eventRepo = dataSource.getRepository("EventInfo");
-      const events = await eventRepo.find({
-        where: { host_info_id: host.id },
-        relations: {
-          eventTagInfoBox: true,
-          eventNoticeBox: true,
-          eventPhotoBox: true,
-          orderBox: true,
-        },
-        order: { created_at: "DESC" },
-      });
+      const query = eventRepo
+        .createQueryBuilder("event")
+        .leftJoinAndSelect("event.eventTagInfoBox", "tagInfo")
+        .leftJoinAndSelect("tagInfo.eventTagsBox", "tag")
+        .leftJoinAndSelect("event.eventNoticeBox", "notice")
+        .leftJoinAndSelect("event.eventPhotoBox", "photo")
+        .leftJoinAndSelect("event.orderBox", "order")
+        .where("event.host_info_id = :hostId", { hostId: host.id });
 
+      if (tagFilter) {
+        query.andWhere("tag.name = :tagName", { tagName: tagFilter });
+      }
+
+      const events = await query.orderBy("event.created_at", "DESC").getMany();
       const now = new Date();
 
       const formattedEvents = events.map((event) => {
@@ -435,7 +439,10 @@ const hostController = {
           is_registration_open: isRegistrationOpen,
           remaining_slots: remainingSlots,
           signup_rate: signupRate,
-          tags: event.eventTagInfoBox.map((tag) => tag.tag_name),
+          tags: (event.eventTagInfoBox || [])
+            .map((info) => info?.eventTagsBox?.name || null)
+            .filter((name) => name !== null),
+
           notices: event.eventNoticeBox.map((notice) => ({
             type: notice.type,
             content: notice.content,
@@ -457,8 +464,7 @@ const hostController = {
         },
       });
     } catch (error) {
-      console.error("取得主辦方活動錯誤：", error); // ⬅️ 加這行
-      logger.error("取得主辦方活動錯誤", error);
+      logger.error("主辦方取得活動留言失敗", error);
       return next(appError(500, "伺服器錯誤，無法取得主辦活動"));
     }
   },

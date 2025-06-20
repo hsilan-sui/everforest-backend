@@ -51,6 +51,12 @@ module.exports = new EntitySchema({
       default: "draft",
       nullable: false,
     },
+    is_rejected: {
+      //新增
+      type: "boolean",
+      default: false,
+      nullable: false,
+    },
     status: {
       type: "enum",
       enum: ["preparing", "registering", "expired", "full"],
