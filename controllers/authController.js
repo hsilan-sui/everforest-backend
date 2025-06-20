@@ -300,6 +300,8 @@ const authController = {
         relations: ["memberAuthProviderBox"],
       });
 
+      let savedNewMember = null;
+
       if (member) {
         const existingAuth = await memberAuthRepo.findOne({
           where: {
@@ -332,7 +334,7 @@ const authController = {
           photo_url: picture,
         });
 
-        const savedNewMember = await memberRepo.save(newMember);
+        savedNewMember = await memberRepo.save(newMember);
 
         const newMemberAuth = await memberAuthRepo.create({
           member_info_id: savedNewMember.id,
@@ -347,9 +349,19 @@ const authController = {
         await memberAuthRepo.save(newMemberAuth);
       }
 
+      let finalMember;
+
+      if (member) {
+        finalMember = member;
+      } else if (savedNewMember) {
+        finalMember = savedNewMember;
+      } else {
+        return next(appError(500, "找不到會員資料"));
+      }
+
       const userPayload = {
-        id: member.id,
-        role: member.role,
+        id: finalMember.id,
+        role: finalMember.role,
         email,
         googleId,
         name,

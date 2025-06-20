@@ -11,7 +11,10 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const { email, sub: googleId, name, picture } = profile._json;
+        const email = profile.emails?.[0]?.value;
+        const googleId = profile.id;
+        const name = profile.displayName;
+        const picture = profile.photos?.[0]?.value;
 
         // 這裡只是將資料傳給 route，實際處理『查詢/建立』在 routes 裡做
         return done(null, { email, googleId, name, picture });
