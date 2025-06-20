@@ -632,6 +632,7 @@ const orderController = {
         plan_id: order.event_plan_id,
         quantity: order.quantity,
         total_price: order.total_price,
+        ticket_code: ticketCode,
       });
 
       const qrBuffer = await QRCode.toBuffer(qrContent, {
@@ -790,6 +791,37 @@ const orderController = {
       });
       console.error("取得票券失敗 >>>", error);
       return next(appError(500, "伺服器錯誤，請稍後再試"));
+    }
+  },
+
+  async verifyTicket(req, res, next) {
+    const { ticket_code } = req.body;
+    const ticketRepo = dataSource.getRepository("OrderTicket");
+    const ticket = await ticketRepo.findOne({
+      where: { ticket_code },
+    });
+
+    if (!ticket) {
+      return next(appError(404, "找不到票券"));
+    }
+
+    if (ticket.status === "已使用") {
+      return next(appError(400, "票券已使用，無法再次核銷"));
+    }
+
+    if (ticket.status === "有效") {
+      // ✅ 更新票券狀態為已使用
+      ticket.status = "已使用";
+      ticket.used_at = new Date();
+      await ticketRepo.save(ticket);
+      return res.status(200).json({
+        status: "success",
+        message: "票券已成功核銷",
+        data: {
+          ticket_code: ticket.ticket_code,
+          used_at: ticket.used_at,
+        },
+      });
     }
   },
 };
