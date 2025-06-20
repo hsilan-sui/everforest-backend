@@ -34,6 +34,110 @@ const adminController = {
       next(err);
     }
   },
+  //取得活動(依據狀態分:active=all 或 active=pending｜active=
+  async getAdminEvents(req, res, next) {
+    const eventRepo = dataSource.getRepository("EventInfo");
+    const {
+      active = "all",
+      page = "1",
+      limit = "10",
+      sort_by = "created_at",
+      order = "DESC",
+    } = req.query;
+
+    const validStatus = ["draft", "rejected", "pending", "published", "archived", "all"];
+    const validSortFields = [
+      "created_at",
+      "start_time",
+      "end_time",
+      "registration_open_time",
+      "registration_close_time",
+      "title",
+      "updated_at",
+    ];
+    const validOrderTypes = ["ASC", "DESC"];
+
+    if (!validStatus.includes(active)) {
+      return next(appError(400, "無效的狀態"));
+    }
+    if (!validSortFields.includes(sort_by)) {
+      return next(appError(400, "無效的排序欄位"));
+    }
+    if (!validOrderTypes.includes(order.toUpperCase())) {
+      return next(appError(400, "排序順序必須是 ASC 或 DESC"));
+    }
+
+    const currentPage = parseInt(page);
+    const pageSize = parseInt(limit);
+    const skip = (currentPage - 1) * pageSize;
+
+    // 組 where 條件
+    let whereCondition = {};
+    if (active === "rejected") {
+      whereCondition = { active: "draft", is_rejected: true };
+    } else if (active === "draft") {
+      whereCondition = { active: "draft", is_rejected: false };
+    } else if (active !== "all") {
+      whereCondition = { active };
+    }
+
+    try {
+      const [data, total] = await eventRepo.findAndCount({
+        where: whereCondition,
+        relations: [
+          "eventPhotoBox",
+          "eventPlanBox",
+          "eventPlanBox.eventPlanAddonBox",
+          "eventPlanBox.eventPlanContentBox",
+        ],
+        order: { [sort_by]: order.toUpperCase() },
+        skip,
+        take: pageSize,
+      });
+
+      // 狀態標籤函式
+      const getActiveStatusLabel = (event) => {
+        if (event.active === "draft" && event.is_rejected) return "已退回";
+        if (event.active === "draft") return "草稿";
+        if (event.active === "pending") return "待審核";
+        if (event.active === "published") return "已上架";
+        if (event.active === "archived") return "已結束";
+        return event.active;
+      };
+
+      const data_lists = data.map((event) => {
+        const cover = event.eventPhotoBox?.find((p) => p.type === "cover")?.photo_url ?? null;
+        const photo_count = event.eventPhotoBox?.length ?? 0;
+        const max_price = event.eventPlanBox?.length
+          ? Math.max(...event.eventPlanBox.map((p) => p.price ?? 0))
+          : null;
+
+        return {
+          id: event.id,
+          title: event.title,
+          cover_photo_url: cover,
+          photo_count,
+          start_date: event.start_time,
+          end_date: event.end_time,
+          max_participants: event.max_participants,
+          max_price,
+          active_status: getActiveStatusLabel(event),
+        };
+      });
+
+      res.status(200).json({
+        status: "success",
+        total_data: total,
+        current_page: currentPage,
+        page_size: pageSize,
+        total_page: Math.ceil(total / pageSize),
+        data_lists,
+      });
+    } catch (error) {
+      console.error("[getAdminEvents] 錯誤：", error);
+      next(appError(500, "查詢活動失敗"));
+    }
+  },
 };
 
 module.exports = adminController;

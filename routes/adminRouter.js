@@ -9,7 +9,17 @@ const adminController = require("../controllers/adminController");
 router.use(checkAuth); // 驗證 JWT cookie  // 先驗證是否登入
 router.use(restrictTo("admin")); // 限定 admin 存取
 
-// 取得會員清單
+// 取得admin data
 router.get("/me", errorAsync(adminController.getAdminData));
+
+// 取得所有主辦方辦的活動
+//取得待審核的所有活動(可以排序 先 後)
+//查看單筆活動詳情
+//審核通過活動
+//審核不通過活動（可附原因）
+//封存已結束或不公開的活動
+
+//查詢活動列表(支援 EVENT_INFO active狀態) all | draft | pending | published | archived
+router.get("/events", errorAsync(adminController.getAdminEvents));
 
 module.exports = router;
