@@ -693,6 +693,64 @@ router.patch(
   errorAsync(eventController.updateEventPlans)
 );
 
+// 刪除活動方案
+
+/**
+ * @swagger
+ * /api/v1/events/{eventId}/plans/{planId}:
+ *   delete:
+ *     summary: 刪除活動方案（含內容與加購品）
+ *     description: 主辦方可刪除某活動的指定方案，系統會一併刪除該方案下所有內容與加購品。需要登入並具主辦方身份。
+ *     tags:
+ *       - Events
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         description: 活動 ID
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: planId
+ *         required: true
+ *         description: 要刪除的活動方案 ID
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: 成功刪除活動方案
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 成功刪除活動方案
+ *       400:
+ *         description: 請求錯誤，例如驗證失敗或資料不完整
+ *       403:
+ *         description: 無權限操作此活動的方案
+ *       404:
+ *         description: 找不到活動或方案
+ *       500:
+ *         description: 系統錯誤
+ */
+router.delete(
+  "/:eventId/plans/:planId",
+  checkAuth,
+  restrictTo("host"),
+  checkEventEditable,
+  errorAsync(eventController.deleteEventPlan)
+);
+
 /**
  * @swagger
  * /api/v1/events/{eventId}/submit:
