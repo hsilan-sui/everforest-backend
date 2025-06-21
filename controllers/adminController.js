@@ -187,10 +187,14 @@ const adminController = {
   async approveEvent(req, res, next) {
     const { id } = req.params;
     const eventRepo = dataSource.getRepository("EventInfo");
-    const hostRepo = dataSource.getRepository("HostInfo");
+    //const hostRepo = dataSource.getRepository("HostInfo");
 
     try {
-      const event = await eventRepo.findOne({ where: { id } });
+      // 撈活動 + 主辦方（使用 relations 自動 join HostInfo）
+      const event = await eventRepo.findOne({
+        where: { id },
+        relations: ["hostBox"], // 關聯主辦方資料
+      });
 
       if (!event) return next(appError(404, "找不到該活動"));
 
@@ -198,11 +202,19 @@ const adminController = {
         return next(appError(400, "僅可審核狀態為『待審核』的活動"));
       }
 
-      // 找出主辦方資料以取得 Email
-      const host = await hostRepo.findOne({ where: { id: event.host_id } });
+      if (!event.hostBox || !event.hostBox.email) {
+        return next(appError(404, "找不到主辦方或主辦方缺少 Email"));
+      }
 
-      if (!host || !host.email) {
-        return next(appError(400, "無法取得主辦方信箱，請確認活動主辦方資料"));
+      // 找出主辦方資料以取得 Email
+      // const host = await hostRepo.findOne({ where: { id: event.event.host_info_id } });
+      // console.log("host email", host.email);
+      // if (!host || !host.email) {
+      //   return next(appError(400, "無法取得主辦方信箱，請確認活動主辦方資料"));
+      // }
+
+      if (event.active !== "pending") {
+        return next(appError(400, "僅可審核狀態為『待審核』的活動"));
       }
 
       // 更新活動狀態
@@ -212,11 +224,11 @@ const adminController = {
 
       // 寄送審核成功通知信
       await sendEventReviewResultEmail({
-        toEmail: [host.email, "hsilanyu@gmail.com"], //host.email
+        toEmail: [event.hostBox.email, "hsilanyu@gmail.com"], //host.email
         eventTitle: event.title,
         isApproved: true,
       });
-
+      // console.warn("✅ 審核成功，主辦方資料：", event.hostBox);
       console.warn("活動審核信件寄出成功：");
       res.status(200).json({
         status: "success",
@@ -236,9 +248,11 @@ const adminController = {
       const { reason = "請依據平台規範修正活動資訊後，再重新將活動送出審核。" } = req.body;
 
       const eventRepo = dataSource.getRepository("EventInfo");
-      const memberRepo = dataSource.getRepository("MemberInfo");
 
-      const event = await eventRepo.findOne({ where: { id: eventId }, relations: ["hostBox"] });
+      const event = await eventRepo.findOne({
+        where: { id: eventId },
+        relations: ["hostBox"], // 只載入 host，不需要 member
+      });
 
       if (!event) return next(appError(404, "找不到該活動"));
       if (event.active !== "pending") {
@@ -250,10 +264,8 @@ const adminController = {
       event.updated_at = new Date();
       await eventRepo.save(event);
 
-      const host = await memberRepo.findOne({ where: { id: event.hostBox.member_id } });
-
       await sendEventReviewResultEmail({
-        toEmail: host.email,
+        toEmail: [event.hostBox.email, "hsilanyu@gmail.com"],
         eventTitle: event.title,
         isApproved: false, // 這裡設為 false 表示是退回審核
         reason: reason, // 可自定義理由
