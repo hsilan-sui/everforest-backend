@@ -904,6 +904,63 @@ const eventController = {
       await queryRunner.release();
     }
   },
+  //deleteEventPlan 控制器（刪除方案＋關聯內容＋加購）
+  async deleteEventPlan(req, res, next) {
+    const { eventId, planId } = req.params;
+    const memberId = req.user?.id;
+
+    // 初始化 Repositories
+    const eventRepo = dataSource.getRepository("EventInfo");
+    const planRepo = dataSource.getRepository("EventPlan");
+    const contentRepo = dataSource.getRepository("EventPlanContent");
+    const addonRepo = dataSource.getRepository("EventPlanAddon");
+    const hostRepo = dataSource.getRepository("HostInfo");
+
+    // 使用 QueryRunner 開啟 Transaction
+    const queryRunner = dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 驗證活動是否存在
+      const event = await eventRepo.findOne({ where: { id: eventId } });
+      if (!event) throw appError(404, "找不到該活動");
+
+      // 驗證主辦方是否為本人
+      const host = await hostRepo.findOne({ where: { member_info_id: memberId } });
+      if (!host || event.host_info_id !== host.id) {
+        throw appError(403, "無權限刪除此活動的方案");
+      }
+
+      // 確認方案是否存在且屬於該活動
+      const plan = await planRepo.findOne({ where: { id: planId, event_info_id: eventId } });
+      if (!plan) throw appError(404, "找不到指定的活動方案");
+
+      // 刪除所有 contents
+      await contentRepo.delete({ event_plan_id: planId });
+
+      // 刪除所有 addons
+      await addonRepo.delete({ event_plan_id: planId });
+
+      // 刪除主方案
+      await planRepo.delete({ id: planId });
+
+      // 成功提交
+      await queryRunner.commitTransaction();
+
+      return res.status(200).json({
+        status: "success",
+        message: "成功刪除活動方案",
+      });
+    } catch (err) {
+      // 發生錯誤則回滾
+      await queryRunner.rollbackTransaction();
+      next(err);
+    } finally {
+      // 最後釋放資源
+      await queryRunner.release();
+    }
+  },
   /**
    * @description 主辦方將活動從草稿(draft)狀態提交活動審核(pending)
    * /**
