@@ -138,6 +138,49 @@ const adminController = {
       next(appError(500, "查詢活動失敗"));
     }
   },
+  // @route GET /api/admin/events/:id
+  // @desc 取得指定活動（完整內容）
+  async getAdminEventById(req, res, next) {
+    const eventRepo = dataSource.getRepository("EventInfo");
+    const { id } = req.params;
+
+    try {
+      const event = await eventRepo.findOne({
+        where: { id },
+        relations: [
+          "eventPhotoBox",
+          "eventPlanBox",
+          "eventPlanBox.eventPlanAddonBox",
+          "eventPlanBox.eventPlanContentBox",
+        ],
+      });
+
+      if (!event) {
+        return next(appError(404, "找不到該活動"));
+      }
+
+      // 統一狀態標籤
+      const getActiveStatusLabel = (event) => {
+        if (event.active === "draft" && event.is_rejected) return "已退回";
+        if (event.active === "draft") return "草稿";
+        if (event.active === "pending") return "待審核";
+        if (event.active === "published") return "已上架";
+        if (event.active === "archived") return "已結束";
+        return event.active;
+      };
+
+      res.status(200).json({
+        status: "success",
+        active_status: getActiveStatusLabel(event),
+        data: {
+          ...event,
+        },
+      });
+    } catch (error) {
+      console.error("[getAdminEventById] 錯誤：", error);
+      next(appError(500, "查詢活動失敗"));
+    }
+  },
 };
 
 module.exports = adminController;
