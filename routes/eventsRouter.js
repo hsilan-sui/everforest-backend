@@ -697,20 +697,25 @@ router.patch(
  * @swagger
  * /api/v1/events/{eventId}/submit:
  *   patch:
- *     summary: 提交活動送審，將狀態從草稿改為 pending
+ *     summary: 提交活動送審（草稿 ➝ 待審核）
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
+ *     description: |
+ *       主辦方將自己草稿狀態的活動提交送審，僅限登入身份為主辦方的會員操作。<br>
+ *       若活動已上架、已下架、或非草稿狀態，將無法提交。<br>
+ *       系統也會檢查活動時間是否過期與基本資訊是否齊全（如標題、時間）。
  *     parameters:
  *       - in: path
  *         name: eventId
  *         required: true
  *         schema:
  *           type: string
- *         description: 活動 ID
+ *           format: uuid
+ *         description: 要提交的活動 ID
  *     responses:
  *       200:
- *         description: 活動已提交審核，請等待審核結果
+ *         description: 活動已成功提交送審
  *         content:
  *           application/json:
  *             schema:
@@ -718,26 +723,44 @@ router.patch(
  *               properties:
  *                 status:
  *                   type: string
+ *                   example: success
  *                 message:
  *                   type: string
+ *                   example: 活動已提交審核，請等待審核結果
  *                 data:
  *                   type: object
  *                   properties:
  *                     eventId:
  *                       type: string
+ *                       example: "c7e8aa29-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
  *                     status:
  *                       type: string
  *                       example: pending
  *       400:
- *         description: 無法提交活動審核，可能原因如下：
- *           - 該活動已經上架（published）
- *           - 該活動已下架（archived）
- *           - 該活動非草稿狀態（非 draft）
- *           - 尚未建立活動詳情（缺少必要資訊）
+ *         description: |
+ *           無法提交活動審核，可能原因包含：
+ *           - 活動已上架（published）
+ *           - 活動已下架（archived）
+ *           - 活動狀態非草稿（非 draft）
+ *           - 活動時間設定錯誤或已過期
+ *           - 缺少必要資訊（如標題、開始時間、結束時間）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: error
+ *                 message:
+ *                   type: string
+ *                   example: 該活動已經上架
+ *       403:
+ *         description: 僅限該活動的主辦方操作
  *       404:
  *         description: 找不到對應的活動
  */
-//提交活動審核 active => draft => pending
+
 router.patch(
   "/:eventId/submit",
   checkAuth,
