@@ -19,9 +19,16 @@ router.get("/events", errorAsync(adminController.getAdminEvents));
 
 //查看單筆活動詳情
 // GET /api/admin/events/:id
+
 router.get("/events/:id", errorAsync(adminController.getAdminEventById));
 
-//審核通過活動
+//PATCH /api/v1/admin/events/:id/approve
+//審核成功 → 將活動從 pending 改為 published(也務必確認is_rejected: false)，寄出通知信
+////審核通過活動
+router.patch("/events/:id/approve", errorAsync(adminController.approveEvent));
+
 //審核不通過活動（可附原因）
+router.patch("/events/:id/reject", errorAsync(adminController.rejectEvent));
+
 //封存已結束或不公開的活動
 module.exports = router;
