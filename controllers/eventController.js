@@ -955,8 +955,9 @@ const eventController = {
       return next(appError(400, "請先建立完整活動詳情（含標題與時間）後再提交"));
     }
 
-    // 成功送審，狀態轉為 pending
+    // 成功送審，狀態轉為 pending，清除退件狀態
     event.active = "pending";
+    event.is_rejected = false;
     await eventRepo.save(event);
 
     return res.status(200).json({
