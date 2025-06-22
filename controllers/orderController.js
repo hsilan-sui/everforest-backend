@@ -169,7 +169,8 @@ const orderController = {
         // 準備寄信資料
         orderList.push({
           activityName: order.eventPlanBox.title,
-          date: `${order.eventPlanBox.eventBox.start_time} ~ ${order.eventPlanBox.eventBox.end_time}`,
+          startDate: order.eventPlanBox.eventBox.start_time,
+          endDate: order.eventPlanBox.eventBox.end_time,
           amount: order.total_price,
         });
       }
