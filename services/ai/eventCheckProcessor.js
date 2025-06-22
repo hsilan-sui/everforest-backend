@@ -10,14 +10,14 @@ const {
   checkCampingRegulations, //// 法規檢查（OpenAI + function calling）
   checkImageDescriptions, //// 圖片描述文字審查（OpenAI）
   summarizeSightengineResults, // 圖片掃描總結（交給 GPT 統整分析）
-} = require("./aiCheckers");
+} = require("./functionCalls");
 
 const {
   checkImageWithSightengine, // 使用 Sightengine 掃描圖片
   simplifySightengineResult, // 把 Sightengine 結果簡化成 GPT 可理解的格式
 } = require("./imageScanner");
 
-const { generateActivityReviewFeedback } = require("./reviewFeedbackGenerator"); // 最後 GPT 整理整體回饋
+const { generateActivityReviewFeedback } = require("./reviewFeedback"); // 最後 GPT 整理整體回饋
 
 const processEventCheck = async (eventData) => {
   try {
@@ -83,6 +83,8 @@ const processEventCheck = async (eventData) => {
       (regulatoryCheck.pass ?? true) &&
       (imageCheck.pass ?? true) &&
       !imageRiskSummary.hasRisk;
+
+    console.warn(`要檢查的活動===> ${results}`); // 看得更完整
 
     //9. 回傳
     return {

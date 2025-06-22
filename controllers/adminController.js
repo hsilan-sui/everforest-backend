@@ -306,9 +306,13 @@ const adminController = {
       }
 
       // 呼叫檢查處理邏輯
-      console.warn(`收到露營活動檢查請求: ${event}`);
-
+      console.warn(`[AI Check] 活動名稱：「${event.title}」`);
+      console.warn(`檢查的活動資料是: ${event}`);
       const result = await processEventCheck(event);
+
+      // Optional: 儲存審查紀錄
+      // event.aiCheckResult = result;
+      // await eventRepo.save(event);
 
       //res.json(result);
 
