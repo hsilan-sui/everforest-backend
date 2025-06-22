@@ -116,7 +116,7 @@ exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
 
   const formattedOrderList = orderList.map((order) => ({
     ...order,
-    formattedDate: formatTaiwanTime(order.startDate, order.endDate),
+    formattedDate: formatTaiwanTime(order.start_time, order.end_time),
   }));
 
   const htmlContent = `
