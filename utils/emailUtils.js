@@ -34,7 +34,7 @@ exports.sendResetPasswordEmail = async (toEmail, resetLink) => {
       text-align: center;
       color: #2c3e50;
     ">
-      <img src="https://i.postimg.cc/nLjKzHRQ/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+      <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
 
       <h2 style="color: #28a745; margin-bottom: 16px;">🌿 密碼重設通知</h2>
 
@@ -111,7 +111,7 @@ exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
   text-align: center;
   color: #2c3e50;
 ">
-  <img src="https://i.postimg.cc/nLjKzHRQ/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+  <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
 
   <h2 style="color: #28a745; margin-bottom: 16px;">🌿 訂單成立通知</h2>
 
@@ -203,7 +203,7 @@ exports.sendTicketEmail = async ({ toEmail, orderId, ticketCode, eventTitle, qrI
       text-align: center;
       color: #5a2b43;
     ">
-      <img src="https://i.postimg.cc/nLjKzHRQ/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+      <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
 
       <h2 style="color: #e75480; margin-bottom: 16px;">🎟️ 您的露營票券已送達！</h2>
 
@@ -251,4 +251,58 @@ exports.sendTicketEmail = async ({ toEmail, orderId, ticketCode, eventTitle, qrI
     .sendMail(mailOptions)
     .then((info) => console.warn("票券信件寄出成功：", info.response))
     .catch((error) => console.error("票券信件寄送失敗：", error));
+};
+
+/**
+ * 寄送活動審核結果通知信
+ */
+exports.sendEventReviewResultEmail = async ({ toEmail, eventTitle, isApproved, reason = "" }) => {
+  const subject = isApproved ? "🎉 活動審核通過通知" : "📝 活動審核退回通知";
+
+  const statusMessage = isApproved
+    ? `<p>您提交的活動 <strong>「${eventTitle}」</strong> 已通過審核，現在已上架至平台了🎊。</p>`
+    : `<p>您提交的活動 <strong>「${eventTitle}」</strong> 未通過審核，請根據以下建議修正後重新提交：</p>
+       <p style="color: #e74c3c; padding: 12px; background: #fff2f0; border-radius: 8px;">${reason}</p>`;
+
+  const mailOptions = {
+    from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
+    to: toEmail, //toEmail
+    subject,
+    html: `
+    <div style="
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      line-height: 1.8;
+      border: 1px solid #eaf4ff;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: ${isApproved ? "#f0fff4" : "#fff0f0"};
+      text-align: center;
+      color: #2c3e50;
+    ">
+      <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+      <h2 style="color: ${isApproved ? "#28a745" : "#d63384"}; margin-bottom: 16px;">
+        ${isApproved ? "✅🌟🤩🤩 您主辦的露營活動已通過審核！" : "❌⚠️👻👻 您主辦的露營活動審核未通過"}
+      </h2>
+
+      ${statusMessage}
+
+      <p style="text-align: left;">若有任何疑問，請來信 <a href="mailto:service@everforest.tw">service@everforest.tw</a></p>
+
+      <p style="text-align: left; font-size: 12px; color: #bbb; margin-top: 24px;">
+        森森不息團隊敬上
+      </p>
+
+      <p style="font-size: 11px; color: #ccc; margin-top: 40px;">
+        © 2025 Everforest | 本郵件由系統自動發送，請勿直接回覆。
+      </p>
+    </div>
+    `,
+  };
+
+  await transporter
+    .sendMail(mailOptions)
+    .then((info) => console.warn("活動審核信件寄出成功：", info.response))
+    .catch((error) => console.error("活動審核信件寄送失敗：", error));
 };
