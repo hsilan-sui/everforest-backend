@@ -32,11 +32,20 @@ const app = express();
 setupSwagger(app);
 app.use(passport.initialize());
 //=> 這裡再進階處理cookie 允許前端請求帶入cookie (裡面夾帶token)
+const allowedOrigins = [
+  "https://camping-project-one.vercel.app", // 前端
+  "https://campingproject.retool.com",      // Retool 網域
+  "http://localhost:3000",                  // 本地測試用
+];
 const corsOptions = {
-  origin:
-    process.env.NODE_ENV !== "production"
-      ? process.env.FRONTEND_DEV_ORIGIN
-      : process.env.FRONTEND_PRO_ORIGIN,
+  origin: function (origin, callback) {
+    console.warn("請求的 Origin 是：", origin);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
 
   credentials: true, //允許帶上cookie
 };
