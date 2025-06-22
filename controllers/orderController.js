@@ -621,7 +621,29 @@ const orderController = {
       });
 
       if (existedTicket) {
-        return res.status(200).json({ msg: "已產生票券", ticket: existedTicket });
+        return res.status(200).json({
+          status: "success",
+          message: "票券已存在，寄送至會員信箱",
+          data: {
+            orders: [
+              {
+                ticket_code: existedTicket.ticket_code,
+                event_title: order.eventPlanBox?.title || "未命名活動",
+                order_id: orderId,
+                quantity: order.quantity,
+                total_price: order.total_price,
+                issued_at: existedTicket.issued_at,
+                qr_image_url: existedTicket.qr_image_url,
+                event_plan: {
+                  title: order.eventPlanBox?.title,
+                  price: order.eventPlanBox?.price,
+                  description: order.eventPlanBox?.description,
+                },
+                event_addons: order.event_addons || [],
+              },
+            ],
+          },
+        });
       }
 
       const ticketCode = uuid().replace(/-/g, "").slice(0, 20).toUpperCase();
