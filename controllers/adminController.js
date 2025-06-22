@@ -6,6 +6,8 @@ const logger = require("../utils/logger")("Admin");
 
 const { sendEventReviewResultEmail } = require("../utils/emailUtils");
 
+const { processEventCheck } = require("../services/ai/eventCheckProcessor");
+
 const adminController = {
   async getAdminData(req, res, next) {
     try {
@@ -274,6 +276,49 @@ const adminController = {
       res.status(200).json({ message: "活動審核『不通過』，已退回活動並通知主辦方" });
     } catch (err) {
       next(err);
+    }
+  },
+  //增加ai審查
+  async aiReviewEvent(req, res, next) {
+    const eventId = req.params.id;
+
+    if (!eventId) {
+      return next(appError(400, "缺少活動 ID"));
+    }
+
+    try {
+      const eventRepo = dataSource.getRepository("EventInfo");
+
+      const event = await eventRepo.findOne({
+        where: { id: eventId },
+        relations: [
+          "hostBox",
+          "eventNoticeBox",
+          "eventPhotoBox",
+          "eventPlanBox",
+          "eventPlanBox.eventPlanContentBox",
+          "eventPlanBox.eventPlanAddonBox",
+        ],
+      });
+
+      if (!event) {
+        return next(appError(404, "找不到對應的活動"));
+      }
+
+      // 呼叫檢查處理邏輯
+      console.warn(`收到露營活動檢查請求: ${event}`);
+
+      const result = await processEventCheck(event);
+
+      //res.json(result);
+
+      res.status(200).json({
+        status: "success",
+        data: result,
+      });
+    } catch (error) {
+      console.error("AI 活動審查失敗:", error);
+      next(appError(500, "AI 活動審查失敗"));
     }
   },
 };
