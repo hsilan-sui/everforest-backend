@@ -97,7 +97,28 @@ exports.sendResetPasswordEmail = async (toEmail, resetLink) => {
 /**
  * 寄送訂單成功通知信
  */
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
+require("dayjs/locale/zh-tw");
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("zh-tw");
+
 exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
+  // 時間格式轉換：將 startDate, endDate 組合成一段格式好的字串
+  const formatTaiwanTime = (start, end) => {
+    const startFormatted = dayjs(start).tz("Asia/Taipei").format("YYYY/MM/DD (ddd) HH:mm");
+    const endFormatted = dayjs(end).tz("Asia/Taipei").format("YYYY/MM/DD (ddd) HH:mm");
+    return `${startFormatted} ~ ${endFormatted}`;
+  };
+
+  const formattedOrderList = orderList.map((order) => ({
+    ...order,
+    formattedDate: formatTaiwanTime(order.startDate, order.endDate),
+  }));
+
   const htmlContent = `
 <div style="
   font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
@@ -121,12 +142,12 @@ exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
   <div style="display: inline-block; text-align: left; margin: 16px auto; border: 1px solid #d8e4dc;
   border-radius: 16px; padding: 16px;">
     <ul style="padding-left: 20px; margin: 0;">
-      ${orderList
+      ${formattedOrderList
         .map(
           (order) => `
       <li style="margin-bottom: 12px;">
         <strong>🌲 活動：</strong>${order.activityName}<br />
-        <strong>📅 日期：</strong>${order.date}<br />
+        <strong>📅 日期：</strong>${order.formattedDate}<br />
         <strong>💰 金額：</strong>${order.amount} 元
       </li>
       `
@@ -150,24 +171,6 @@ exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
   </p>
 </div>
   `;
-  // const htmlContent = `
-  //   <p>您好，</p>
-  //   <p>您已成功預訂以下露營活動：</p>
-  //   <ul>
-  //     ${orderList
-  //       .map(
-  //         (order) => `
-  //       <li>
-  //         活動：${order.activityName}<br/>
-  //         日期：${order.date}<br/>
-  //         金額：${order.amount} 元
-  //       </li>
-  //     `
-  //       )
-  //       .join("")}
-  //   </ul>
-  //   <p>我們期待與您一同共度美好時光！</p>
-  // `;
 
   const mailOptions = {
     from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
