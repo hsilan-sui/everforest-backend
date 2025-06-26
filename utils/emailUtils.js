@@ -34,7 +34,7 @@ exports.sendResetPasswordEmail = async (toEmail, resetLink) => {
       text-align: center;
       color: #2c3e50;
     ">
-      <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+      <img src="https://storage.googleapis.com/everforest-e0f71.firebasestorage.app/host/covers/f47086f8-43a9-4a21-938b-6a49b0987349.png?GoogleAccessId=firebase-adminsdk-fbsvc%40everforest-e0f71.iam.gserviceaccount.com&Expires=1782444355&Signature=QAIS44g%2FjE5Ma2ngkY1opvjriAJEd61ShoIxiGURtgZzGzz%2BcCQLC9R5PaGkefN751viG8X8PbQKXja5l4B3%2BaBPz28CRpLbtaBYda4T%2FXey%2BD9SGGLGJSWUHoT28nzIVozOwJU0OIbqNKqIz152dWlnxJtALSOo%2FXDLnyRxEwChvauyK6zapSFV%2FBWRcWL7zmAEoVQPOvNfn7klIMHtD5djiwWq0oCErXSKXmUHtbYyKlubnMzVqcdg%2FpHKpb4XEGpSHkPgmQzU4EqFYAimuOsnqX4RSlHyAPagacmtbfgPcbErVbdNWMEADJrpd9DwGA0v2bIuuPc6grl7mmH5kg%3D%3D" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
 
       <h2 style="color: #28a745; margin-bottom: 16px;">🌿 密碼重設通知</h2>
 
