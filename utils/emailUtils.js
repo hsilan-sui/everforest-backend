@@ -132,7 +132,7 @@ exports.sendOrderSuccessEmail = async (toEmail, orderList = []) => {
   text-align: center;
   color: #2c3e50;
 ">
-  <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+  <img src="https://firebasestorage.googleapis.com/v0/b/everforest-e0f71.firebasestorage.app/o/%E6%A3%AE%E6%A3%AE%E4%B8%8D%E6%81%AF.png?alt=media&token=9faf1e8f-1759-49c1-b74f-a4e790476166" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
 
   <h2 style="color: #28a745; margin-bottom: 16px;">🌿 訂單成立通知</h2>
 
@@ -206,7 +206,7 @@ exports.sendTicketEmail = async ({ toEmail, orderId, ticketCode, eventTitle, qrI
       text-align: center;
       color: #5a2b43;
     ">
-      <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+      <img src="https://firebasestorage.googleapis.com/v0/b/everforest-e0f71.firebasestorage.app/o/%E6%A3%AE%E6%A3%AE%E4%B8%8D%E6%81%AF.png?alt=media&token=9faf1e8f-1759-49c1-b74f-a4e790476166" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
 
       <h2 style="color: #e75480; margin-bottom: 16px;">🎟️ 您的露營票券已送達！</h2>
 
@@ -284,7 +284,7 @@ exports.sendEventReviewResultEmail = async ({ toEmail, eventTitle, isApproved, r
       text-align: center;
       color: #2c3e50;
     ">
-      <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+      <img src="https://firebasestorage.googleapis.com/v0/b/everforest-e0f71.firebasestorage.app/o/%E6%A3%AE%E6%A3%AE%E4%B8%8D%E6%81%AF.png?alt=media&token=9faf1e8f-1759-49c1-b74f-a4e790476166" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
       <h2 style="color: ${isApproved ? "#28a745" : "#d63384"}; margin-bottom: 16px;">
         ${isApproved ? "✅🌟🤩🤩 您主辦的露營活動已通過審核！" : "❌⚠️👻👻 您主辦的露營活動審核未通過"}
       </h2>
