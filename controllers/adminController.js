@@ -8,6 +8,8 @@ const { sendEventReviewResultEmail } = require("../utils/emailUtils");
 
 const { processEventCheck } = require("../services/ai/eventCheckProcessor");
 
+const { formatReviewResultHTML } = require("../utils/reviewFormatter");
+
 const adminController = {
   async getAdminData(req, res, next) {
     try {
@@ -278,7 +280,129 @@ const adminController = {
       next(err);
     }
   },
-  //增加ai審查
+
+  //   //// AI 自動審核活動，根據結果決定是否上架並寄信通知主辦方
+  //   async aiReviewEvent(req, res, next) {
+  //     const eventId = req.params.id;
+
+  //     if (!eventId) {
+  //       return next(appError(400, "缺少活動 ID"));
+  //     }
+
+  //     const eventRepo = dataSource.getRepository("EventInfo");
+
+  //     try {
+  //       const event = await eventRepo.findOne({
+  //         where: { id: eventId },
+  //         relations: [
+  //           "hostBox",
+  //           "eventNoticeBox",
+  //           "eventPhotoBox",
+  //           "eventPlanBox",
+  //           "eventPlanBox.eventPlanContentBox",
+  //           "eventPlanBox.eventPlanAddonBox",
+  //         ],
+  //       });
+
+  //       if (!event) {
+  //         return next(appError(404, "找不到對應的活動"));
+  //       }
+
+  //       if (event.active !== "pending") {
+  //         return next(appError(400, "僅可審核狀態為『待審核』的活動"));
+  //       }
+
+  //       if (!event.hostBox || !event.hostBox.email) {
+  //         return next(appError(404, "找不到主辦方或主辦方缺少 Email"));
+  //       }
+
+  //       // 呼叫檢查處理邏輯
+  //       console.warn(`[AI Check] 活動名稱：「${event.title}」`);
+  //       console.warn(`檢查的活動資料是: ${event}`);
+  //       const result = await processEventCheck(event);
+
+  //       //提取審查的結果和回饋
+  //       const { success, feedback, sensitiveCheck, regulatoryCheck, imageCheck, imageRiskSummary } = result;
+
+  //        // === 若通過審核 ===
+  //       if(success) {
+  //         event.active = "published";
+  //         event.is_rejected = false;
+
+  //         await eventRepo.save(event);
+
+  //         // 立即查回來印出
+  // const after = await eventRepo.findOne({ where: { id: event.id } });
+  // console.log("儲存後的 active 狀態：", after.active);
+
+  //         await sendEventReviewResultEmail({
+  //           toEmail: [event.hostBox.email, "hsilanyu@gmail.com"],
+  //           eventTitle: event.title,
+  //           isApproved: true,
+  //         });
+
+  //         return res.status(200).json({
+  //           status: "success",
+  //           message: "AI 審核通過，活動已自動上架並通知主辦方",
+  //           data: {
+  //             success, feedback, sensitiveCheck, regulatoryCheck, imageCheck, imageRiskSummary
+  //           }
+  //         });
+
+  //       }
+
+  //       // === 若未通過審核 ===
+  //     event.active = "draft";
+  //     event.is_rejected = true;
+
+  //     await eventRepo.save(event);
+
+  //     // 審核失敗理由彙整（內含 function call 各檢查結果）
+  //     const reason = `
+  //       ### ❌ AI 活動審查未通過的原因：
+
+  //       - 敏感詞檢查：${sensitiveCheck.pass ? "✅ 通過" : "❌ 未通過"}
+  //       - 法規檢查：${regulatoryCheck.pass ? "✅ 通過" : "❌ 未通過"}
+  //       - 圖片描述審查：${imageCheck.pass ? "✅ 通過" : "❌ 未通過"}
+  //       - 圖片風險分析：${imageRiskSummary.hasRisk ? "❌ 發現風險" : "✅ 無風險"}
+
+  //       ### GPT 回饋建議：
+  //       ${feedback}
+  //           `.trim();
+
+  //     await sendEventReviewResultEmail({
+  //       toEmail: [event.hostBox.email, "hsilanyu@gmail.com"],
+  //       eventTitle: event.title,
+  //       isApproved: false,
+  //       reason,
+  //     });
+
+  //     // 審核失敗理由彙整（內含 function call 各檢查結果）
+
+  //       // Optional: 儲存審查紀錄
+  //       // event.aiCheckResult = result;
+  //       // await eventRepo.save(event);
+
+  //       //res.json(result);
+
+  //       // 更新狀態與寄信
+
+  //       // res.status(200).json({
+  //       //   status: "success",
+  //       //   data: result,
+  //       // });
+  //       return res.status(200).json({
+  //         status: "fail",
+  //         message: "AI 審核未通過，已通知主辦方修改內容",
+  //         data: {
+  //           success, feedback, sensitiveCheck, regulatoryCheck, imageCheck, imageRiskSummary
+  //         }
+  //       });
+  //     } catch (error) {
+  //       console.error("AI 活動審查失敗:", error);
+  //       next(appError(500, "AI 活動審查失敗"));
+  //     }
+  //   },
   async aiReviewEvent(req, res, next) {
     const eventId = req.params.id;
 
@@ -286,9 +410,9 @@ const adminController = {
       return next(appError(400, "缺少活動 ID"));
     }
 
-    try {
-      const eventRepo = dataSource.getRepository("EventInfo");
+    const eventRepo = dataSource.getRepository("EventInfo");
 
+    try {
       const event = await eventRepo.findOne({
         where: { id: eventId },
         relations: [
@@ -305,20 +429,57 @@ const adminController = {
         return next(appError(404, "找不到對應的活動"));
       }
 
-      // 呼叫檢查處理邏輯
+      if (event.active !== "pending") {
+        return next(appError(400, "僅可審核狀態為『待審核』的活動"));
+      }
+
+      if (!event.hostBox || !event.hostBox.email) {
+        return next(appError(404, "找不到主辦方或主辦方缺少 Email"));
+      }
+
+      // 執行 AI 檢查
       console.warn(`[AI Check] 活動名稱：「${event.title}」`);
-      console.warn(`檢查的活動資料是: ${event}`);
       const result = await processEventCheck(event);
+      const { success, feedback, sensitiveCheck, regulatoryCheck, imageCheck, imageRiskSummary } =
+        result;
 
-      // Optional: 儲存審查紀錄
-      // event.aiCheckResult = result;
-      // await eventRepo.save(event);
+      // 根據結果產生 reason（無論通過與否）
+      const reason = formatReviewResultHTML(result, success);
 
-      //res.json(result);
+      // 更新活動狀態
+      if (success) {
+        event.active = "published";
+        event.is_rejected = false;
+      } else {
+        event.active = "draft";
+        event.is_rejected = true;
+      }
 
-      res.status(200).json({
-        status: "success",
-        data: result,
+      await eventRepo.save(event);
+
+      // 寄出 email 通知主辦方
+      await sendEventReviewResultEmail({
+        toEmail: [event.hostBox.email, "hsilanyu@gmail.com"],
+        eventTitle: event.title,
+        isApproved: success,
+        reason,
+        isAiReview: true,
+      });
+
+      // 回應前端
+      return res.status(200).json({
+        status: success ? "success" : "fail",
+        message: success
+          ? "AI 審核通過，活動已自動上架並通知主辦方"
+          : "AI 審核未通過，已通知主辦方修改內容",
+        data: {
+          success,
+          feedback,
+          sensitiveCheck,
+          regulatoryCheck,
+          imageCheck,
+          imageRiskSummary,
+        },
       });
     } catch (error) {
       console.error("AI 活動審查失敗:", error);

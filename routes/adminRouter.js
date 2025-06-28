@@ -379,5 +379,6 @@ router.patch("/events/:id/reject", errorAsync(adminController.rejectEvent));
 
 //------ AI 審查 ----------
 router.post("/events/:id/ai-check", errorAsync(adminController.aiReviewEvent));
+
 //封存已結束或不公開的活動
 module.exports = router;
