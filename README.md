@@ -70,18 +70,29 @@ http://localhost:3000
 
 ```
 everforest-backend/
-├── app.js                 # 入口主程式
-├── bin/www.js             # 啟動伺服器
-├── config/                # DB、Passport、環境設定
-├── controllers/           # 控制器邏輯
-├── db/data-source.js      # TypeORM 設定
-├── entities/              # 資料庫模型
-├── middlewares/           # 中介層
-├── routes/                # 路由定義
-├── utils/                 # 工具函式
-├── swagger.js             # Swagger 設定
-├── docker-compose.yml     # Docker 設定
-└── .env.example           # 環境變數範本
+├── app.js                      # Express 入口主程式
+├── bin/
+│   └── www.js                  # HTTP server 啟動點
+├── config/                     # 資料庫、環境變數與驗證等設定
+├── controllers/                # 各 API 控制器（Auth、Event、Order 等）
+├── db/
+│   └── data-source.js          # TypeORM 資料來源設定
+├── entities/                   # TypeORM Entity 資料模型
+├── middlewares/                # 中介層（權限驗證、錯誤處理等）
+├── migrations/                 # TypeORM 資料庫遷移檔案
+├── routes/                     # 路由定義檔（分組管理 API）
+├── utils/                      # 共用工具函式（Token、Logger 等）
+├── swagger.js                  # Swagger API 文件設定
+├── wait-for-postgres.js        # Docker 啟動時等待資料庫準備就緒
+├── zeabur-template.yml         # Zeabur 部署設定樣板
+├── docker-compose.yml          # Docker 容器編排設定
+├── Dockerfile.dev              # 開發用 Dockerfile
+├── .env.example                # 環境變數範本（建議複製為 .env 使用）
+├── .husky/                     # Git commit hook 設定（Husky）
+├── .github/                    # GitHub Actions 工作流程與 CI 設定
+├── .eslintrc / .prettierrc     # Lint 與格式化規則
+└── README.md                   # 專案說明文件
+
 ```
 
 ---
@@ -89,6 +100,9 @@ everforest-backend/
 ## 📚 API 文件
 
 API 文件使用 Swagger 自動產生，啟動後可透過下列路徑存取：
+
+> 📘 [點我開啟 Everforest API 文件](https://everforest-backend.zeabur.app/api-docs/)
+> 或以下網址：
 
 ```
 http://localhost:3000/api-docs
@@ -100,4 +114,6 @@ http://localhost:3000/api-docs
 
 本後端服務已正式部署於 Zeabur，線上 API 可透過以下正式網址存取：
 
-[https://everforest-backend.zeabur.app/](https://everforest-backend.zeabur.app/)
+- [https://everforest-backend.zeabur.app/](https://everforest-backend.zeabur.app/)
+
+- [點我開啟 Everforest API 文件](https://everforest-backend.zeabur.app/api-docs/)

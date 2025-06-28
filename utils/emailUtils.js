@@ -259,13 +259,40 @@ exports.sendTicketEmail = async ({ toEmail, orderId, ticketCode, eventTitle, qrI
 /**
  * 寄送活動審核結果通知信
  */
-exports.sendEventReviewResultEmail = async ({ toEmail, eventTitle, isApproved, reason = "" }) => {
+exports.sendEventReviewResultEmail = async ({
+  toEmail,
+  eventTitle,
+  isApproved,
+  isAiReview = false,
+  reason = "",
+}) => {
   const subject = isApproved ? "🎉 活動審核通過通知" : "📝 活動審核退回通知";
 
-  const statusMessage = isApproved
-    ? `<p>您提交的活動 <strong>「${eventTitle}」</strong> 已通過審核，現在已上架至平台了🎊。</p>`
-    : `<p>您提交的活動 <strong>「${eventTitle}」</strong> 未通過審核，請根據以下建議修正後重新提交：</p>
-       <p style="color: #e74c3c; padding: 12px; background: #fff2f0; border-radius: 8px;">${reason}</p>`;
+  const statusMessage = `
+  <p>您提交的活動 <strong>「${eventTitle}」</strong> ${
+    isApproved ? "已通過審核，現在已上架至平台了🎊。" : "未通過審核，請根據以下建議修正後重新提交："
+  }</p>
+
+  ${
+    isAiReview && reason
+      ? `
+      <hr style="margin: 24px 0; border: none; border-top: 1px dashed #ccc;" />
+      <p style="font-weight: bold;">🤖 以下為 AI 審核回饋：</p>
+      <div style="margin-top: 12px;">${reason}</div>
+      <p style="font-size: 13px; color: #888; margin-top: 24px;">
+        📡 <em>本次審核由 Everforest AI 系統自動執行，內容僅供參考，請依照建議優化您的活動內容。</em>
+      </p>
+      `
+      : ""
+  }
+`;
+
+  // const statusMessage = isApproved
+  //   ? `<p>您提交的活動 <strong>「${eventTitle}」</strong> 已通過審核，現在已上架至平台了🎊。</p>
+
+  //   `
+  //   : `<p>您提交的活動 <strong>「${eventTitle}」</strong> 未通過審核，請根據以下建議修正後重新提交：</p>
+  //      <p style="color: #e74c3c; padding: 12px; background: #fff2f0; border-radius: 8px;">${reason}</p>`;
 
   const mailOptions = {
     from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
