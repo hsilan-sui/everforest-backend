@@ -163,6 +163,12 @@ const orderController = {
         order.status = "Paid";
         await orderRepo.save(order);
 
+        const event = order.eventPlanBox.eventBox;
+        const people = order.eventPlanBox.people_capacity || 1;
+        const eventRepo = dataSource.getRepository("EventInfo");
+        // 更新活動報名人數
+        await eventRepo.increment({ id: event.id }, "total_signup", people);
+
         // 取得 email
         if (!email) email = order.memberBox?.email;
 
@@ -213,11 +219,33 @@ const orderController = {
     // 1 分鐘後才變成 refunded
     setTimeout(async () => {
       try {
-        const freshOrder = await orderRepo.findOne({ where: { id: orderId } });
+        const freshOrder = await orderRepo.findOne({
+          where: { id: orderId },
+          relations: ["eventPlanBox", "eventPlanBox.eventBox"],
+        });
         freshOrder.status = "Refunded";
         freshOrder.refund_amount = freshOrder.total_price;
         freshOrder.refund_at = new Date();
         await orderRepo.save(freshOrder);
+
+        // 扣除報名人數
+        const event = freshOrder.eventPlanBox.eventBox;
+        const people = freshOrder.eventPlanBox.people_capacity || 1;
+
+        if (event) {
+          const eventRepo = dataSource.getRepository("EventInfo");
+          await eventRepo.decrement({ id: event.id }, "total_signup", people);
+
+          // 若是 full，檢查是否可改為 registering
+          const updatedEvent = await eventRepo.findOne({ where: { id: event.id } });
+          if (
+            updatedEvent.status === "full" &&
+            updatedEvent.total_signup < updatedEvent.max_participants
+          ) {
+            updatedEvent.status = "registering";
+            await eventRepo.save(updatedEvent);
+          }
+        }
 
         // 計算該付款紀錄已退款訂單的退款金額總和
         const refundedOrders = await orderRepo.find({

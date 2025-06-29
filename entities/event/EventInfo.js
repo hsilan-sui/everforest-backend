@@ -86,6 +86,11 @@ module.exports = new EntitySchema({
       type: "double precision",
       nullable: true,
     },
+    total_signup: {
+      type: "integer",
+      nullable: false,
+      default: 0,
+    },
     created_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",

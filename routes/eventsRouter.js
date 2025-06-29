@@ -830,12 +830,15 @@ router.patch(
  * @swagger
  * /api/v1/events/recommend:
  *   get:
- *     summary: 取得推薦活動，依縣市分類
+ *     summary: 取得推薦活動（依縣市分類）與熱門活動
  *     tags: [Events]
- *     description: 根據活動地址中的縣市名稱進行分類，回傳所有已發布的推薦活動。
+ *     description: >
+ *       根據活動地址中的縣市名稱進行分類，回傳所有已發布的推薦活動，
+ *       並同時回傳最多人報名的熱門活動（最多六筆）。
+ *       若熱門活動不足六筆，則會補上隨機活動。
  *     responses:
  *       200:
- *         description: 成功取得推薦活動
+ *         description: 成功取得推薦活動與熱門活動
  *         content:
  *           application/json:
  *             schema:
@@ -849,21 +852,59 @@ router.patch(
  *                   example: 取得推薦活動成功
  *                 data:
  *                   type: object
- *                   example:
- *                     台北:
- *                       - id: "3a325cbd-04b2-4373-94ba-b03041fa9bcb"
- *                         title: "2025 復興區角板山sisi露營派對3"
- *                         description: "和sisi，一起來狂野露營！上山下水都奉陪3"
- *                         photos: []
- *                       - id: "953fc991-8a85-4726-99df-11922bb423a5"
- *                         title: "2025 復興區角板山sisi露營派對1"
- *                         description: "和sisi，一起來狂野露營！上山下水都奉陪1"
- *                         photos: []
- *                     宜蘭:
- *                       - id: "1c362f8e-1e42-44d5-9bc7-30d5c431f766"
- *                         title: "2025 復興區角板山sisi露營派對yo"
- *                         description: "和sisi，一起來狂野露營！上山下水都奉陪yo"
- *                         photos: []
+ *                   properties:
+ *                     groupedEvents:
+ *                       type: object
+ *                       description: 依縣市分類的推薦活動列表
+ *                       example:
+ *                         台北:
+ *                           - id: "3a325cbd-04b2-4373-94ba-b03041fa9bcb"
+ *                             title: "2025 復興區角板山sisi露營派對3"
+ *                             description: "和sisi，一起來狂野露營！上山下水都奉陪3"
+ *                             photos: []
+ *                           - id: "953fc991-8a85-4726-99df-11922bb423a5"
+ *                             title: "2025 復興區角板山sisi露營派對1"
+ *                             description: "和sisi，一起來狂野露營！上山下水都奉陪1"
+ *                             photos: []
+ *                         宜蘭:
+ *                           - id: "1c362f8e-1e42-44d5-9bc7-30d5c431f766"
+ *                             title: "2025 復興區角板山sisi露營派對yo"
+ *                             description: "和sisi，一起來狂野露營！上山下水都奉陪yo"
+ *                             photos: []
+ *                     popularEvents:
+ *                       type: array
+ *                       description: 熱門活動（最多六筆）
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "a1b2c3d4-5678-90ab-cdef-1234567890ab"
+ *                           title:
+ *                             type: string
+ *                             example: "2025 熱門露營活動"
+ *                           description:
+ *                             type: string
+ *                             example: "熱門活動說明"
+ *                           start_time:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-08-20T02:00:00.000Z"
+ *                           end_time:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-08-21T08:00:00.000Z"
+ *                           total_signup:
+ *                             type: integer
+ *                             example: 150
+ *                           max_participants:
+ *                             type: integer
+ *                             example: 300
+ *                           photos:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             example: ["https://example.com/photo1.jpg"]
  *       500:
  *         description: 伺服器錯誤，請稍後再試
  *         content:
