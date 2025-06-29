@@ -51,7 +51,15 @@ const adminController = {
       order = "DESC",
     } = req.query;
 
-    const validStatus = ["draft", "rejected", "pending", "published", "archived", "all"];
+    const validStatus = [
+      "draft",
+      "rejected",
+      "pending",
+      "published",
+      "unpublish_pending",
+      "archived",
+      "all",
+    ];
     const validSortFields = [
       "created_at",
       "start_time",
@@ -85,6 +93,9 @@ const adminController = {
       whereCondition = { active: "draft", is_rejected: false };
     } else if (active !== "all") {
       whereCondition = { active };
+    } else if (active === "unpublish_pending") {
+      //待審核下架
+      whereCondition = { active: "unpublish_pending" };
     }
 
     try {
