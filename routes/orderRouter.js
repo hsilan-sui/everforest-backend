@@ -856,4 +856,37 @@ router.get("/:orderid/ticket/:ticketid", checkAuth, errorAsync(orderController.g
  */
 router.post("/verify-ticket", errorAsync(orderController.verifyTicket));
 
+/**
+ * @swagger
+ * /api/v1/member/orders/ticket/view:
+ *   get:
+ *     summary: 顯示票券資訊頁面
+ *     description: 透過票券代碼查詢並呈現票券資訊頁面（HTML 格式）
+ *     tags:
+ *       - 票券 Ticket
+ *     parameters:
+ *       - name: q
+ *         in: query
+ *         required: true
+ *         description: 票券查詢資訊（包含 ticket_code 的 JSON 字串，經過 encodeURIComponent）
+ *         schema:
+ *           type: string
+ *           example: "%7B%22ticket_code%22%3A%22A9B6B43892BA49AEAED9%22%7D"
+ *     responses:
+ *       200:
+ *         description: 成功回傳票券資訊 HTML 頁面
+ *         content:
+ *           text/html:
+ *             schema:
+ *               type: string
+ *               example: "<!DOCTYPE html>..."
+ *       400:
+ *         description: 缺少或錯誤的參數
+ *       404:
+ *         description: 找不到票券
+ *       500:
+ *         description: 系統錯誤
+ */
+router.get("/ticket/view", errorAsync(orderController.viewTicketPage));
+
 module.exports = router;
