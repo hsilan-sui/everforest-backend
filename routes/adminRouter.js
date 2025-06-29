@@ -377,5 +377,68 @@ router.patch("/events/:id/approve", errorAsync(adminController.approveEvent));
  */
 router.patch("/events/:id/reject", errorAsync(adminController.rejectEvent));
 
+//------ AI 審查 ----------
+/**
+ * @swagger
+ * /admin/events/{id}/ai-check:
+ *   post:
+ *     tags:
+ *       - Admin - 活動審核
+ *     summary: 使用 AI 自動審核活動內容（僅限待審核活動）
+ *     description: >
+ *       對指定活動執行 AI 自動審核流程，包括敏感詞檢查、法規合規、圖片分析等。<br>
+ *       若審核通過則自動上架，否則退回為草稿並寄送 AI 審查回饋信給主辦方。
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: 活動 ID
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 審核成功或退回（含審查結果）
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: AI 審核通過，活動已自動上架並通知主辦方
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     success:
+ *                       type: boolean
+ *                       example: true
+ *                     feedback:
+ *                       type: string
+ *                       description: GPT 回饋建議
+ *                     sensitiveCheck:
+ *                       type: object
+ *                       description: 敏感詞檢查結果
+ *                     regulatoryCheck:
+ *                       type: object
+ *                       description: 法規檢查結果
+ *                     imageCheck:
+ *                       type: object
+ *                       description: 圖片描述檢查結果
+ *                     imageRiskSummary:
+ *                       type: object
+ *                       description: 圖片風險檢查結果
+ *       400:
+ *         description: 缺少活動 ID 或狀態錯誤
+ *       404:
+ *         description: 找不到活動或主辦方 Email
+ *       500:
+ *         description: 伺服器錯誤
+ */
+
+router.post("/events/:id/ai-check", errorAsync(adminController.aiReviewEvent));
+
 //封存已結束或不公開的活動
 module.exports = router;

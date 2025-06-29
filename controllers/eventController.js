@@ -1233,6 +1233,8 @@ const eventController = {
           start_time: event.start_time,
           end_time: event.end_time,
           address: event ? event.address : "",
+          max_participants: event.max_participants,
+          total_signup: event.total_signup || 0,
           plans: event.eventPlanBox.map((plan) => ({
             title: plan.title,
             price: plan.price,
@@ -1248,6 +1250,49 @@ const eventController = {
 
   async recommendEvents(req, res) {
     const eventRepo = dataSource.getRepository("EventInfo");
+    // 先撈最多人報名的活動 (active: published)
+    let popularEvents = await eventRepo.find({
+      where: { active: "published" },
+      order: { total_signup: "DESC" },
+      take: 6,
+      relations: ["eventPhotoBox"],
+    });
+
+    const popularCount = popularEvents.length;
+
+    // 如果少於6筆，補隨機活動
+    if (popularCount < 6) {
+      // 撈其他非熱門的活動ID，避免重複
+      const excludeIds = popularEvents.map((e) => e.id);
+      const needCount = 6 - popularCount;
+
+      // 先撈全部可用活動 (不包含熱門活動)
+      const otherEvents = await eventRepo
+        .createQueryBuilder("event")
+        .leftJoinAndSelect("event.eventPhotoBox", "photo")
+        .where("event.active = :active", { active: "published" })
+        .andWhere("event.id NOT IN (:...excludeIds)", {
+          excludeIds: excludeIds.length ? excludeIds : [""],
+        })
+        .orderBy("RANDOM()")
+        .limit(needCount)
+        .getMany();
+
+      popularEvents = popularEvents.concat(otherEvents);
+    }
+
+    // 熱門活動
+    const popularEventsData = popularEvents.map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      start_time: event.start_time,
+      end_time: event.end_time,
+      total_signup: event.total_signup,
+      max_participants: event.max_participants,
+      photos: event.eventPhotoBox?.map((photo) => photo.photo_url) || [],
+    }));
+
     const events = await eventRepo.find({
       relations: ["eventPhotoBox"],
       where: { active: "published" },
@@ -1282,7 +1327,10 @@ const eventController = {
     return res.status(200).json({
       status: "success",
       message: "取得推薦活動成功",
-      data: groupedEvents,
+      data: {
+        popularEvents: popularEventsData,
+        groupedEvents,
+      },
     });
   },
 

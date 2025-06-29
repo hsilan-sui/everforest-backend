@@ -36,7 +36,6 @@ const checkEventEditable = async (req, res, next) => {
     return next(appError(403, `活動狀態為『${statusLabel}』，無法進行編輯操作`));
   }
 
-
   // 報名截止時間已過，禁止編輯
   const now = new Date();
   if (event.registration_close_time && new Date(event.registration_close_time) < now) {

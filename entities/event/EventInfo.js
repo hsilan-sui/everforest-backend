@@ -46,8 +46,9 @@ module.exports = new EntitySchema({
       nullable: false,
     },
     active: {
+      //管理平台狀態（是否公開）
       type: "enum",
-      enum: ["draft", "pending", "published", "archived"],
+      enum: ["draft", "pending", "published", "unpublish_pending", "archived"],
       default: "draft",
       nullable: false,
     },
@@ -57,7 +58,13 @@ module.exports = new EntitySchema({
       default: false,
       nullable: false,
     },
+    unpublish_reason: {
+      //下架理由
+      type: "text",
+      nullable: true,
+    },
     status: {
+      //反映活動進度（報名開啟/關閉）
       type: "enum",
       enum: ["preparing", "registering", "expired", "full"],
       default: "preparing",
@@ -79,6 +86,11 @@ module.exports = new EntitySchema({
       type: "double precision",
       nullable: true,
     },
+    total_signup: {
+      type: "integer",
+      nullable: false,
+      default: 0,
+    },
     created_at: {
       type: "timestamptz",
       default: () => "CURRENT_TIMESTAMP",
@@ -89,6 +101,11 @@ module.exports = new EntitySchema({
       default: () => "CURRENT_TIMESTAMP",
       onUpdate: () => "CURRENT_TIMESTAMP",
       nullable: false,
+    },
+    archived_at: {
+      //下架時間
+      type: "timestamptz",
+      nullable: true,
     },
   },
   relations: {

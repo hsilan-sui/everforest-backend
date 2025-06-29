@@ -34,8 +34,8 @@ app.use(passport.initialize());
 //=> 這裡再進階處理cookie 允許前端請求帶入cookie (裡面夾帶token)
 const allowedOrigins = [
   "https://camping-project-one.vercel.app", // 前端
-  "https://campingproject.retool.com",      // Retool 網域
-  "http://localhost:3000",                  // 本地測試用
+  "https://campingproject.retool.com", // Retool 網域
+  "http://localhost:3000", // 本地測試用
 ];
 const corsOptions = {
   origin: function (origin, callback) {
@@ -78,7 +78,6 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.send("北十四 test test");
 });
-
 
 app.use("/api/v1/admin", adminRouter);
 

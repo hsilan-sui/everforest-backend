@@ -631,6 +631,60 @@ router.post(
 
 router.get("/events", checkAuth, restrictTo("host"), errorAsync(hostController.getHostEvents));
 
+//依條件申請或立即下架
+/**
+ * @swagger
+ * /api/host/events/{eventid}/request-unpublish:
+ *   patch:
+ *     tags:
+ *       - Host - 活動管理
+ *     summary: 主辦方申請活動下架
+ *     description: >
+ *       僅限活動狀態為 published 時由主辦方發起下架。<br>
+ *       若尚未開放報名且無任何訂單紀錄，活動將直接進入 archived 狀態；否則進入 unpublish_pending 狀態並交由管理員審核。
+ *     parameters:
+ *       - in: path
+ *         name: eventid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 活動 ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 example: 想調整活動內容與時間
+ *     responses:
+ *       200:
+ *         description: 回傳下架成功或進入審核中訊息
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 下架申請已送出，等待審核
+ *       403:
+ *         description: 無此權限，請先登入或無法取得主辦方資料
+ *       404:
+ *         description: 找不到活動
+ */
+router.patch(
+  "/events/:eventid/request-unpublish",
+  checkAuth,
+  restrictTo("host"),
+  errorAsync(hostController.requestUnpublishEvent)
+);
+
 router.get(
   "/events/:eventid/comment",
   checkAuth,

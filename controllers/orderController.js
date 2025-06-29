@@ -163,6 +163,12 @@ const orderController = {
         order.status = "Paid";
         await orderRepo.save(order);
 
+        const event = order.eventPlanBox.eventBox;
+        const people = order.eventPlanBox.people_capacity || 1;
+        const eventRepo = dataSource.getRepository("EventInfo");
+        // 更新活動報名人數
+        await eventRepo.increment({ id: event.id }, "total_signup", people);
+
         // 取得 email
         if (!email) email = order.memberBox?.email;
 
@@ -213,11 +219,33 @@ const orderController = {
     // 1 分鐘後才變成 refunded
     setTimeout(async () => {
       try {
-        const freshOrder = await orderRepo.findOne({ where: { id: orderId } });
+        const freshOrder = await orderRepo.findOne({
+          where: { id: orderId },
+          relations: ["eventPlanBox", "eventPlanBox.eventBox"],
+        });
         freshOrder.status = "Refunded";
         freshOrder.refund_amount = freshOrder.total_price;
         freshOrder.refund_at = new Date();
         await orderRepo.save(freshOrder);
+
+        // 扣除報名人數
+        const event = freshOrder.eventPlanBox.eventBox;
+        const people = freshOrder.eventPlanBox.people_capacity || 1;
+
+        if (event) {
+          const eventRepo = dataSource.getRepository("EventInfo");
+          await eventRepo.decrement({ id: event.id }, "total_signup", people);
+
+          // 若是 full，檢查是否可改為 registering
+          const updatedEvent = await eventRepo.findOne({ where: { id: event.id } });
+          if (
+            updatedEvent.status === "full" &&
+            updatedEvent.total_signup < updatedEvent.max_participants
+          ) {
+            updatedEvent.status = "registering";
+            await eventRepo.save(updatedEvent);
+          }
+        }
 
         // 計算該付款紀錄已退款訂單的退款金額總和
         const refundedOrders = await orderRepo.find({
@@ -649,13 +677,9 @@ const orderController = {
       const ticketCode = uuid().replace(/-/g, "").slice(0, 20).toUpperCase();
       const fileName = `${ticketCode}.png`;
 
-      const qrContent = JSON.stringify({
-        order_id: order.id,
-        plan_id: order.event_plan_id,
-        quantity: order.quantity,
-        total_price: order.total_price,
-        ticket_code: ticketCode,
-      });
+      const qrPayload = { ticket_code: ticketCode };
+      //const qrContent = `http://localhost:3000/api/v1/member/orders/ticket/view?q=${encodeURIComponent(JSON.stringify(qrPayload))}`;
+      const qrContent = `https://everforest-backend.zeabur.app/api/v1/member/orders/ticket/view?q=${encodeURIComponent(JSON.stringify(qrPayload))}`;
 
       const qrBuffer = await QRCode.toBuffer(qrContent, {
         errorCorrectionLevel: "M",
@@ -844,6 +868,159 @@ const orderController = {
           used_at: ticket.used_at,
         },
       });
+    }
+  },
+
+  async viewTicketPage(req, res) {
+    try {
+      const { q } = req.query;
+      if (!q) return res.status(400).send("❌ 無效票券資訊");
+
+      const { ticket_code } = JSON.parse(decodeURIComponent(q));
+
+      const ticketRepo = dataSource.getRepository("OrderTicket");
+      const ticket = await ticketRepo.findOne({
+        where: { ticket_code },
+        relations: ["orderInfoBox", "orderInfoBox.eventPlanBox"],
+      });
+
+      if (!ticket) return res.status(404).send("❌ 找不到票券");
+
+      const eventTitle = ticket.orderInfoBox?.eventPlanBox?.title || "未命名活動";
+      const createdAt = ticket.created_at?.toLocaleString() || "未知";
+      const usedAt = ticket.used_at?.toLocaleString() || "尚未使用";
+
+      const statusDisplay =
+        {
+          有效: '<span class="status-valid">有效</span>',
+          已使用: '<span class="status-used">已使用 ✅</span>',
+          作廢: '<span class="status-void">作廢 ❌</span>',
+        }[ticket.status] || '<span style="color: gray;">未知狀態</span>';
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="zh-Hant">
+        <head>
+          <meta charset="UTF-8" />
+          <title>票券資訊</title>
+          <style>
+            body {
+              font-family: 'Arial', sans-serif;
+              background: #f0f0f0;
+              padding: 0;
+              margin: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+            }
+            .card {
+              background: white;
+              padding: 32px;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+              max-width: 480px;
+              width: 90%;
+              text-align: center;
+            }
+            h2 {
+              margin-bottom: 24px;
+            }
+            .info {
+              margin-bottom: 12px;
+              font-size: 16px;
+              text-align: left;
+            }
+            .label {
+              font-weight: bold;
+            }
+            .status-valid {
+              color: orange;
+              font-weight: bold;
+            }
+            .status-used {
+              color: green;
+              font-weight: bold;
+            }
+            .status-void {
+              color: red;
+              font-weight: bold;
+            }
+            .note {
+              margin-top: 20px;
+              font-size: 14px;
+              color: #666;
+            }
+            .btn {
+              display: inline-block;
+              margin-top: 28px;
+              padding: 12px 20px;
+              font-size: 16px;
+              background-color: #007BFF;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              text-decoration: none;
+              cursor: pointer;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h2>🎫 票券資訊</h2>
+
+            <div class="info"><span class="label">活動名稱：</span> ${eventTitle}</div>
+            <div class="info"><span class="label">票券代碼：</span> ${ticket.ticket_code}</div>
+            <div class="info"><span class="label">狀態：</span> ${statusDisplay}</div>
+            <div class="info"><span class="label">發出時間：</span> ${createdAt}</div>
+            <div class="info"><span class="label">使用時間：</span> ${usedAt}</div>
+
+            <div class="note">此票券僅限本人使用，請勿截圖或轉傳他人</div>
+
+            ${
+              ticket.status === "有效"
+                ? `<form id="verify-form">
+                    <input type="hidden" name="ticket_code" value="${ticket.ticket_code}">
+                    <button type="submit" class="btn">✅ 核銷票券</button>
+                  </form>`
+                : ""
+            }
+          </div>
+
+          ${
+            ticket.status === "有效"
+              ? `<script>
+                  document.getElementById("verify-form")?.addEventListener("submit", async function(e) {
+                    e.preventDefault();
+                    const ticketCode = e.target.ticket_code.value;
+
+                    const res = await fetch("/api/v1/member/orders/verify-ticket", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ticket_code: ticketCode })
+                    });
+
+                    const result = await res.json();
+                    if (res.ok) {
+                      alert("✅ 票券核銷成功！");
+                      location.reload();
+                    } else {
+                      alert("❌ 核銷失敗：" + (result.message || "未知錯誤"));
+                    }
+                  });
+                </script>`
+              : ""
+          }
+
+        </body>
+        </html>
+      `;
+
+      res.setHeader("Content-Type", "text/html");
+      res.send(html);
+    } catch (err) {
+      console.error("ticket view error:", err);
+      res.status(500).send("❌ 系統錯誤");
     }
   },
 };
