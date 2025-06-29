@@ -59,14 +59,19 @@ module.exports = new EntitySchema({
       nullable: false,
     },
     unpublish_reason: {
-      //下架理由
+      //主辦方下架理由
+      type: "text",
+      nullable: true,
+    },
+    unpublish_review_comment: {
+      //審核-下架理由
       type: "text",
       nullable: true,
     },
     status: {
       //反映活動進度（報名開啟/關閉）
       type: "enum",
-      enum: ["preparing", "registering", "expired", "full"],
+      enum: ["preparing", "registering", "expired", "full", "refunding", "cancelled", "finished"],
       default: "preparing",
       nullable: false,
     },

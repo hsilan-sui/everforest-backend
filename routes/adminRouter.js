@@ -441,5 +441,63 @@ router.patch("/events/:id/reject", errorAsync(adminController.rejectEvent));
 
 router.post("/events/:id/ai-check", errorAsync(adminController.aiReviewEvent));
 
+/**
+ * PATCH /api/admin/events/:eventId/unpublish-review
+ * @desc 管理員審核下架申請 （下架 或 拒絕）
+ */
+/**
+ * @swagger
+ * /admin/events/{eventId}/unpublish/review:
+ *   patch:
+ *     tags:
+ *       - Admin - 活動審核
+ *     summary: 審核活動下架申請
+ *     description: >
+ *       管理員針對主辦方提出的活動下架申請進行審核。若審核通過，將根據是否已有報名者決定活動是否進入退款或直接封存。<br>
+ *       若審核不通過，活動將恢復上架狀態，並寄信通知主辦方與報名者。
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         description: 活動 ID
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               isApprove:
+ *                 type: boolean
+ *                 description: 是否同意下架申請
+ *                 example: true
+ *               comment:
+ *                 type: string
+ *                 description: 管理員審核備註（可選）
+ *                 example: "理由合理，已同意下架"
+ *     responses:
+ *       200:
+ *         description: 審核結果回應
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 下架審核通過，活動進入退款處理
+ *       400:
+ *         description: 活動狀態錯誤或條件不符
+ *       404:
+ *         description: 找不到活動
+ */
+
+router.patch("/events/:eventId/unpublish-review", errorAsync(adminController.reviewUnpublish));
+
 //封存已結束或不公開的活動
 module.exports = router;
