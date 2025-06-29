@@ -529,6 +529,63 @@ const hostController = {
       return next(appError(500, "伺服器錯誤，無法取得留言"));
     }
   },
+  async requestUnpublishEvent(req, res, next) {
+    const { eventid } = req.params;
+    const { reason } = req.body;
+    const hostRepo = dataSource.getRepository("HostInfo");
+
+    const host = await hostRepo.findOne({
+      where: { memberBox: { id: req.user.id } },
+      relations: ["memberBox"],
+    });
+
+    if (!host) {
+      return next(appError(403, "無法取得主辦方資料"));
+    }
+    const eventRepo = dataSource.getRepository("EventInfo");
+
+    const event = await eventRepo.findOne({
+      where: { id: eventid },
+      relations: ["orderBox", "hostBox"], //取得報名訂單
+    });
+
+    if (!event) return next(appError(404, "找不到活動"));
+
+    //event.hostBox ==> 活動內容
+    if (!event.hostBox || event.hostBox.id !== host.id) {
+      return next(appError(403, "無此權限，請先登入"));
+    }
+
+    // 僅允許從 published 狀態進行下架
+    if (event.active !== "published") {
+      return next(appError(400, "只有已上架活動可以申請下架"));
+    }
+
+    const now = new Date();
+
+    const canUnpublish =
+      event.registration_open_time &&
+      now < event.registration_open_time &&
+      event.orderBox.length === 0;
+
+    if (canUnpublish) {
+      //可立即下架
+      event.active = "archived"; //下架
+      event.unpublish_reason = reason || null;
+      event.archived_at = new Date();
+    } else {
+      //需要送審查
+      event.active = "unpublish_pending"; //送出審查中
+      event.unpublish_reason = reason || null;
+    }
+
+    await eventRepo.save(event);
+
+    res.status(200).json({
+      status: "success",
+      message: canUnpublish ? "活動已下架" : "下架申請已送出，等待審核",
+    });
+  },
 };
 
 module.exports = hostController;
