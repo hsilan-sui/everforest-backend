@@ -336,3 +336,211 @@ exports.sendEventReviewResultEmail = async ({
     .then((info) => console.warn("活動審核信件寄出成功：", info.response))
     .catch((error) => console.error("活動審核信件寄送失敗：", error));
 };
+
+/**
+ * 寄送活動下架申請審核結果通知信
+ */
+exports.sendUnpublishReviewResultEmail = async ({
+  toEmail,
+  eventId,
+  eventTitle,
+  isApproved,
+  reason = "", // 主辦方下架理由
+  note = "", // 管理員審核備註
+  startTime,
+  endTime,
+  registrationOpenTime,
+  registrationCloseTime,
+  hasOrder = false,
+}) => {
+  const subject = isApproved ? "✅ 活動下架申請審核通過" : "❌  活動下架申請被退回";
+
+  const dateBlock = `
+    <div style="margin: 24px 0; text-align: left;">
+      <strong>📅 活動資訊：</strong><br />
+      🆔 活動 ID：${eventId}<br />
+      🏕️ 活動時間：${formatDateRange(startTime, endTime)}<br />
+      📋 報名期間：${formatDateRange(registrationOpenTime, registrationCloseTime)}
+    </div>
+  `;
+
+  const refundReminder = isApproved
+    ? hasOrder
+      ? `
+        <div style="text-align: left; margin-top: 24px; color: #d63384;">
+          <strong>⚠️ 提醒：</strong><br>
+          本活動已有報名紀錄，請盡速聯繫報名者，並依規定處理退款事宜。<br>
+          系統已將活動狀態設為「退款處理中」。
+        </div>
+      `
+      : `
+        <div style="text-align: left; margin-top: 24px; color: #666;">
+          本活動無任何報名紀錄，系統已自動完成下架處理 ✅。
+        </div>
+      `
+    : "";
+
+  const statusMessage = `
+    <p>您申請下架的活動 <strong>「${eventTitle}」</strong> ${
+      isApproved
+        ? "已通過審核，系統已依情況處理後續退款或下架作業。"
+        : "尚未通過審核，請參考以下建議後重新確認。"
+    }</p>
+    ${
+      reason
+        ? `
+      <div style="margin-top: 16px; text-align: left;">
+        <strong>📌 主辦方下架理由：</strong><br />
+        ${reason}
+      </div>`
+        : ""
+    }
+    ${
+      note
+        ? `
+      <div style="margin-top: 16px; text-align: left; color: #444;">
+        <strong>🗒️ 平台審核備註：</strong><br />
+        ${note}
+      </div>`
+        : ""
+    }
+  `;
+
+  const html = `
+    <div style="
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      line-height: 1.8;
+      border: 1px solid #eaf4ff;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: ${isApproved ? "#f0fff4" : "#fff0f0"};
+      text-align: center;
+      color: #2c3e50;
+    ">
+      <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo"
+        style="max-width: 140px; margin-bottom: 24px;" />
+      <h2 style="color: ${isApproved ? "#28a745" : "#d63384"}; margin-bottom: 16px;">
+        ${isApproved ? "✅ 活動下架審核通過" : "❌ 下架申請未通過"}
+      </h2>
+      ${statusMessage}
+      ${dateBlock}
+      ${refundReminder}
+      <p style="text-align: left;">若有任何疑問，歡迎來信 <a href="mailto:service@everforest.tw">service@everforest.tw</a></p>
+      <p style="text-align: left; font-size: 12px; color: #bbb; margin-top: 24px;">
+        森森不息團隊敬上
+      </p>
+      <p style="font-size: 11px; color: #ccc; margin-top: 40px;">
+        © 2025 Everforest | 本郵件由系統自動發送，請勿直接回覆。
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject,
+    html,
+  };
+
+  await transporter
+    .sendMail(mailOptions)
+    .then((info) => console.warn("下架審核信寄出成功：", info.response))
+    .catch((error) => console.error("下架審核信寄送失敗：", error));
+};
+
+/**
+ * 格式化日期區間
+ */
+const formatDateRange = (start, end) => {
+  const dayjs = require("dayjs");
+  const utc = require("dayjs/plugin/utc");
+  const timezone = require("dayjs/plugin/timezone");
+  dayjs.extend(utc);
+  dayjs.extend(timezone);
+
+  const s = dayjs(start).tz("Asia/Taipei").format("YYYY/MM/DD HH:mm");
+  const e = dayjs(end).tz("Asia/Taipei").format("YYYY/MM/DD HH:mm");
+  return `${s} ~ ${e}`;
+};
+
+/**
+ * 寄送活動取消通知信（給報名者）
+ */
+exports.sendEventCancelledNoticeEmail = async ({
+  toEmail,
+  eventId,
+  eventTitle,
+  startTime,
+  endTime,
+  reason = "因應氣候不佳以及土石流嚴重的因素，為了安全起見，取消該露營活動",
+  refundInfo = "平台將於 3–5 個工作天內完成退款程序。",
+}) => {
+  const subject = "📢 活動取消通知：退款處理中";
+
+  const formattedTime =
+    dayjs(startTime).tz("Asia/Taipei").format("YYYY/MM/DD (ddd)") +
+    " ~ " +
+    dayjs(endTime).tz("Asia/Taipei").format("YYYY/MM/DD (ddd)");
+
+  const html = `
+  <div style="
+    font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+    line-height: 1.8;
+    border: 1px solid #ffe0e0;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff7f7;
+    text-align: center;
+    color: #5a2b43;
+  ">
+    <img src="https://i.postimg.cc/pXqnm9rf/everforest-logo.png" alt="Everforest Logo" style="max-width: 140px; margin-bottom: 24px;" />
+    <h2 style="color: #e74c3c;">📢 活動取消通知</h2>
+
+    <p style="text-align: left;">親愛的用戶您好，</p>
+    <p style="text-align: left;">
+      很抱歉通知您，您所報名的活動 <strong>「${eventTitle}」</strong><br />
+      活動時間：${formattedTime}<br />
+      活動 ID：<code>${eventId}</code><br />
+      已由主辦方申請取消，並經平台審核後確認不再舉辦。
+    </p>
+
+    <p style="text-align: left; margin-top: 16px;">
+      📄 <strong>取消原因：</strong><br />
+      ${reason}
+    </p>
+
+    <p style="text-align: left; margin-top: 16px;">
+      💸 <strong>退款說明：</strong><br />
+      ${refundInfo}
+    </p>
+
+    <p style="text-align: left; font-size: 13px; color: #888; margin-top: 24px;">
+      若有任何疑問，歡迎來信 <a href="mailto:service@everforest.tw">service@everforest.tw</a>
+    </p>
+
+    <p style="text-align: left; font-size: 12px; color: #bbb; margin-top: 24px;">
+      🌲 森森不息團隊 敬上
+    </p>
+
+    <p style="font-size: 11px; color: #ccc; margin-top: 40px;">
+      © 2025 Everforest | 本郵件由系統自動發送，請勿直接回覆。
+    </p>
+  </div>
+  `;
+
+  const mailOptions = {
+    from: `"Everforest_森森不息露營活動平台" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    subject,
+    html,
+  };
+
+  await transporter
+    .sendMail(mailOptions)
+    .then((info) => console.warn("報名者取消通知信寄出成功：", info.response))
+    .catch((error) => console.error("報名者取消通知信寄送失敗：", error));
+};
