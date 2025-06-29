@@ -81,7 +81,7 @@ router.use(restrictTo("admin")); // 限定 admin 存取
 
 router.get("/me", errorAsync(adminController.getAdminData));
 
-//查詢活動列表(支援 EVENT_INFO active狀態) all | draft | pending | published | archived
+//查詢活動列表(支援 EVENT_INFO active狀態) all | draft | pending | published | archived | unpublish_pending
 // 取得所有主辦方辦的活動
 //取得待審核的所有活動(可以排序 先 後)
 /**
@@ -94,6 +94,7 @@ router.get("/me", errorAsync(adminController.getAdminData));
  *     description: |
  *       管理員後台查詢活動清單，支援依據活動狀態、分頁、排序方式查詢。<br>
  *       若指定 `active=rejected` 則查詢退件活動（實際為 active=draft 且 is_rejected=true）。<br>
+ *       若指定 `active=unpublish_pending` 則查詢主辦方送出的下架申請（尚未審核）。<br>
  *       回傳每筆活動資料包含封面圖、方案最高價、圖片數量、開始/結束時間、狀態標籤。
  *     parameters:
  *       - in: query
@@ -102,7 +103,7 @@ router.get("/me", errorAsync(adminController.getAdminData));
  *         required: false
  *         schema:
  *           type: string
- *           enum: [all, draft, rejected, pending, published, archived]
+ *           enum: [all, draft, rejected, pending, published, archived, unpublish_pending]
  *           default: all
  *       - in: query
  *         name: page
