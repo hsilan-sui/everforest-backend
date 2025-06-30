@@ -1230,6 +1230,7 @@ const eventController = {
         events: events.map((event) => ({
           id: event.id,
           title: event.title,
+          status: event.status,
           start_time: event.start_time,
           end_time: event.end_time,
           address: event ? event.address : "",
@@ -1255,7 +1256,7 @@ const eventController = {
       where: { active: "published" },
       order: { total_signup: "DESC" },
       take: 6,
-      relations: ["eventPhotoBox"],
+      relations: ["eventPhotoBox", "eventPlanBox"],
     });
 
     const popularCount = popularEvents.length;
@@ -1286,6 +1287,9 @@ const eventController = {
       id: event.id,
       title: event.title,
       description: event.description,
+      price: event.eventPlanBox?.[0]?.price || 0,
+      discounted_price: event.eventPlanBox?.[0]?.discounted_price || 0,
+      address: event.address,
       start_time: event.start_time,
       end_time: event.end_time,
       total_signup: event.total_signup,
