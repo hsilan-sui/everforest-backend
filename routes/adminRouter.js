@@ -499,5 +499,7 @@ router.post("/events/:id/ai-check", errorAsync(adminController.aiReviewEvent));
 
 router.patch("/events/:eventId/unpublish-review", errorAsync(adminController.reviewUnpublish));
 
+router.patch("/events/auto-update-status", errorAsync(adminController.updateEventStatus));
+
 //封存已結束或不公開的活動
 module.exports = router;
