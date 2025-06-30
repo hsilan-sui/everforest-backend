@@ -54,7 +54,7 @@ app.use(cookieParser()); //允許讀取cookie
 
 //*** 第 1 階段：基礎安全與跨域設定 ***
 app.use(cors(corsOptions)); // 處理跨域 //允許前端請求帶上cookie
-
+app.options("*", cors(corsOptions)); //額外處理 preflight 預請求（OPTIONS）避免 fetch POST 報 CORS 錯
 //*** 第 2 階段：解析請求內容 ***
 // 限制傳過來的 JSON 大小
 app.use(express.json({ limit: "10kb" })); // 限制 JSON 請求大小

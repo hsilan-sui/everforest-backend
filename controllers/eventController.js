@@ -1180,20 +1180,34 @@ const eventController = {
     // 處理 minPrice 和 maxPrice 篩選
     if (minPrice && !isNaN(parseInt(minPrice))) {
       const parsedMinPrice = parseInt(minPrice);
-      queryBuilder.andWhere("eventPlanBox.price >= :minPrice AND eventPlanBox.price IS NOT NULL", {
-        minPrice: parsedMinPrice,
-      });
+      queryBuilder.andWhere(
+        `( (eventPlanBox.discounted_price IS NOT NULL AND eventPlanBox.discounted_price >= :minPrice)
+          OR (eventPlanBox.discounted_price IS NULL AND eventPlanBox.price >= :minPrice) )`,
+        { minPrice: parsedMinPrice }
+      );
     }
 
     if (maxPrice && !isNaN(parseInt(maxPrice))) {
       const parsedMaxPrice = parseInt(maxPrice);
-      queryBuilder.andWhere("eventPlanBox.price <= :maxPrice AND eventPlanBox.price IS NOT NULL", {
-        maxPrice: parsedMaxPrice,
-      });
+      queryBuilder.andWhere(
+        `( (eventPlanBox.discounted_price IS NOT NULL AND eventPlanBox.discounted_price <= :maxPrice)
+          OR (eventPlanBox.discounted_price IS NULL AND eventPlanBox.price <= :maxPrice) )`,
+        { maxPrice: parsedMaxPrice }
+      );
     }
 
+    queryBuilder.addSelect(
+      `
+      CASE
+        WHEN "eventPlanBox".discounted_price IS NOT NULL THEN "eventPlanBox".discounted_price
+        ELSE "eventPlanBox".price
+      END
+    `,
+      "effective_price"
+    );
+
     if (sortField === "price") {
-      queryBuilder.addOrderBy("eventPlanBox.price", sortOrder);
+      queryBuilder.orderBy("effective_price", sortOrder);
     } else {
       queryBuilder.addOrderBy(`event.${sortField}`, sortOrder);
     }
@@ -1283,13 +1297,28 @@ const eventController = {
       popularEvents = popularEvents.concat(otherEvents);
     }
 
+    // 取最低原價
+    const getLowestPrice = (plans) => {
+      if (!plans || plans.length === 0) return 0;
+      return Math.min(...plans.map((p) => p.price));
+    };
+
+    // 取最低折扣價（沒有折扣價則回傳 0 或 null）
+    const getLowestDiscountedPrice = (plans) => {
+      if (!plans || plans.length === 0) return 0;
+      const discountedPrices = plans
+        .filter((p) => p.discounted_price !== null && p.discounted_price > 0)
+        .map((p) => p.discounted_price);
+      return discountedPrices.length > 0 ? Math.min(...discountedPrices) : 0;
+    };
+
     // 熱門活動
     const popularEventsData = popularEvents.map((event) => ({
       id: event.id,
       title: event.title,
       description: event.description,
-      price: event.eventPlanBox?.[0]?.price || 0,
-      discounted_price: event.eventPlanBox?.[0]?.discounted_price || 0,
+      price: getLowestPrice(event.eventPlanBox),
+      discounted_price: getLowestDiscountedPrice(event.eventPlanBox),
       address: event.address,
       start_time: event.start_time,
       end_time: event.end_time,
