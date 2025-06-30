@@ -10,6 +10,11 @@ const { processEventCheck } = require("../services/ai/eventCheckProcessor");
 
 const { formatReviewResultHTML } = require("../utils/reviewFormatter");
 
+const {
+  sendUnpublishReviewResultEmail,
+  sendEventCancelledNoticeEmail,
+} = require("../utils/emailUtils");
+
 const adminController = {
   async getAdminData(req, res, next) {
     try {
@@ -51,7 +56,15 @@ const adminController = {
       order = "DESC",
     } = req.query;
 
-    const validStatus = ["draft", "rejected", "pending", "published", "archived", "all"];
+    const validStatus = [
+      "draft",
+      "rejected",
+      "pending",
+      "published",
+      "unpublish_pending",
+      "archived",
+      "all",
+    ];
     const validSortFields = [
       "created_at",
       "start_time",
@@ -85,6 +98,9 @@ const adminController = {
       whereCondition = { active: "draft", is_rejected: false };
     } else if (active !== "all") {
       whereCondition = { active };
+    } else if (active === "unpublish_pending") {
+      //待審核下架
+      whereCondition = { active: "unpublish_pending" };
     }
 
     try {
@@ -484,6 +500,215 @@ const adminController = {
     } catch (error) {
       console.error("AI 活動審查失敗:", error);
       next(appError(500, "AI 活動審查失敗"));
+    }
+  },
+  //審核下架申請
+  // async reviewUnpublish(req, res, next) {
+  //   try {
+  //     const { eventId } = req.params;
+  //     const { isApprove, comment } = req.body;
+
+  //     const eventRepo = dataSource.getRepository("EventInfo");
+
+  //     // 取得活動資料（包含訂單與主辦方）
+  //     const event = await eventRepo.findOne({
+  //       where: { id: eventId },
+  //       relations: ["orderBox", "hostBox"],
+  //     });
+
+  //     if (!event) return next(appError(404, "找不到活動"));
+
+  //     // 僅允許處理正在申請下架的活動
+  //     if (event.active !== "unpublish_pending") {
+  //       return next(appError(400, "活動目前不在申請下架狀態"));
+  //     }
+
+  //     // // 紀錄審查備註
+  //     event.unpublish_review_comment = comment || null;
+  //     const hasOrder = event.orderBox.length > 0;
+
+  //     if (isApprove) {
+  //       if (hasOrder) {
+  //         // 有報名 → 停止曝光、標示退款階段
+  //         event.active = "draft"; // 停止曝光
+  //         event.status = "refunding"; // 顯示退款中狀態
+  //         event.unpublish_reason =
+  //           comment || "審核通過下架，進入退款流程，請主辦方依序為消費者辦理退款";
+
+  //         //發信寄給報名者：TODO
+  //         for (const order of event.orderBox) {
+  //           await sendEventCancelledNoticeEmail({
+  //             toEmail: order.memberBox.email,
+  //             eventId: event.id,
+  //             eventTitle: event.title,
+  //             startTime: event.start_time,
+  //             endTime: event.end_time,
+  //             reason: comment || "主辦方提出取消申請，平台已通過審核",
+  //             refundInfo: "退款將依原付款方式退回，請耐心等候 3–5 個工作天。",
+  //           });
+  //         }
+  //       } else {
+  //         // 無人報名 → 可直接下架
+  //         event.active = "archived";
+  //         event.status = "cancelled"; // 活動取消
+  //         event.archived_at = new Date();
+  //         event.unpublish_reason = comment || "通過下架，活動已停辦";
+  //       }
+  //     } else {
+  //       // 駁回申請 → 恢復上架
+  //       event.active = "published";
+  //       event.status = "registering";
+  //       event.unpublish_reason = comment || "已退回下架申請";
+  //     }
+
+  //     // await eventRepo.save(event);
+  //     await eventRepo.update(event.id, {
+  //       unpublish_review_comment: comment || null,
+  //       unpublish_reason: isApprove
+  //         ? hasOrder
+  //           ? comment || "審核通過下架，進入退款流程"
+  //           : comment || "通過下架，活動已停辦"
+  //         : comment || "已退回下架申請",
+  //       active: isApprove
+  //         ? hasOrder ? "draft" : "archived"
+  //         : "published",
+  //       status: isApprove
+  //         ? hasOrder ? "refunding" : "cancelled"
+  //         : "registering",
+  //       archived_at: isApprove && !hasOrder ? new Date() : null,
+  //     });
+
+  //     // TODO: 通知主辦方（寄信或站內信）
+  //     // 取得主辦方 Email
+  //     const toEmail = event.hostBox?.email;
+
+  //     // 寄送下架結果通知
+  //     if (toEmail) {
+  //       await sendUnpublishReviewResultEmail({
+  //         toEmail,
+  //         eventId,
+  //         eventTitle: event.title,
+  //         isApproved: isApprove,
+  //         reason: comment || "",
+  //         note: event.unpublish_reason,
+  //         note: event.unpublish_review_comment,
+  //         startTime: event.start_time,
+  //         endTime: event.end_time,
+  //         registrationOpenTime: event.registration_open_time,
+  //         registrationCloseTime: event.registration_close_time,
+  //         hasOrder: event.orderBox.length > 0,
+  //       });
+  //     }
+
+  //     res.status(200).json({
+  //       status: "success",
+  //       message: isApprove
+  //         ? hasOrder
+  //           ? "下架審核通過，活動進入退款處理"
+  //           : "下架審核通過，活動已下架"
+  //         : "下架申請已退回，活動仍維持上架",
+  //     });
+  //   } catch (err) {
+  //     next(err);
+  //   }
+  // },
+  /**
+ * 審核主辦方的活動下架申請
+ * 
+ * 管理員可根據主辦方申請理由進行審核，若活動已有人報名則轉入退款流程；
+ * 若尚無報名者，則直接封存活動。若審核未通過，活動會恢復上架。
+
+ *
+ * @example
+ * PATCH /api/admin/events/:eventId/unpublish-review
+ * {
+ *   "isApprove": true,
+ *   "comment": "理由合理，進入退款程序"
+ * }
+ */
+
+  // 審核下架申請
+  async reviewUnpublish(req, res, next) {
+    try {
+      const { eventId } = req.params;
+      const { isApprove, comment } = req.body;
+
+      const eventRepo = dataSource.getRepository("EventInfo");
+
+      // 重新取得最新活動資料（包含訂單與主辦方）
+      const event = await eventRepo.findOne({
+        where: { id: eventId },
+        relations: ["orderBox", "hostBox"],
+      });
+
+      if (!event) return next(appError(404, "找不到活動"));
+      if (event.active !== "unpublish_pending") {
+        return next(appError(400, "活動目前不在申請下架狀態"));
+      }
+
+      // 開始根據審核結果修改欄位
+      const hasOrder = event.orderBox.length > 0;
+      event.unpublish_review_comment = comment || null;
+
+      if (isApprove) {
+        if (hasOrder) {
+          event.active = "draft";
+          event.status = "refunding";
+
+          // 寄信通知所有報名者
+          for (const order of event.orderBox) {
+            await sendEventCancelledNoticeEmail({
+              toEmail: order.memberBox.email,
+              eventId: event.id,
+              eventTitle: event.title,
+              startTime: event.start_time,
+              endTime: event.end_time,
+              reason: event.unpublish_reason, // 使用主辦方的原始理由
+              refundInfo: "退款將依原付款方式退回，請耐心等候 3–5 個工作天。",
+            });
+          }
+        } else {
+          event.active = "archived";
+          event.status = "cancelled";
+          event.archived_at = new Date();
+        }
+      } else {
+        // 審核不通過，恢復上架
+        event.active = "published";
+        event.status = "registering";
+      }
+
+      // 儲存修改後的完整資料（包含 updated_at）
+      await eventRepo.save(event);
+
+      // 通知主辦方
+      const toEmail = event.hostBox?.email;
+      if (toEmail) {
+        await sendUnpublishReviewResultEmail({
+          toEmail,
+          eventId,
+          eventTitle: event.title,
+          isApproved: isApprove,
+          reason: event.unpublish_reason, // 主辦方原始理由
+          note: event.unpublish_review_comment, // 審核補充說明
+          startTime: event.start_time,
+          endTime: event.end_time,
+          registrationOpenTime: event.registration_open_time,
+          registrationCloseTime: event.registration_close_time,
+          hasOrder,
+        });
+      }
+
+      res.status(200).json({
+        status: "success",
+        message: isApprove
+          ? hasOrder
+            ? "下架審核通過，活動進入退款處理"
+            : "下架審核通過，活動已下架"
+          : "下架申請已退回，活動仍維持上架",
+      });
+    } catch (err) {
+      next(err);
     }
   },
 };
