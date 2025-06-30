@@ -1239,6 +1239,7 @@ const eventController = {
           plans: event.eventPlanBox.map((plan) => ({
             title: plan.title,
             price: plan.price,
+            discounted_price: plan.discounted_price,
             people_capacity: plan.people_capacity,
           })),
           photos: event.eventPhotoBox?.map((photo) => photo.photo_url) || [],
