@@ -499,5 +499,35 @@ router.post("/events/:id/ai-check", errorAsync(adminController.aiReviewEvent));
 
 router.patch("/events/:eventId/unpublish-review", errorAsync(adminController.reviewUnpublish));
 
+/**
+ * @swagger
+ * /api/admin/events/auto-update-status:
+ *   patch:
+ *     tags:
+ *       - Admin - 活動管理
+ *     summary: 自動更新活動狀態（批次更新）
+ *     description: |
+ *       根據目前時間與活動的報名起訖時間、活動起訖時間，自動判斷每場活動的狀態，並進行批次更新。<br>
+ *       僅針對 `active = published` 且 `status` 屬於特定範圍的活動進行判斷與更新。
+ *     responses:
+ *       200:
+ *         description: 更新完成，回傳成功數量
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 已更新 5 筆活動狀態
+ *       500:
+ *         description: 更新過程中發生錯誤
+ */
+
+router.patch("/events/auto-update-status", errorAsync(adminController.updateEventStatus));
+
 //封存已結束或不公開的活動
 module.exports = router;
