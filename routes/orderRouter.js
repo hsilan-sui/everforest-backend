@@ -857,7 +857,7 @@ router.get("/:orderid/ticket/:ticketid", checkAuth, errorAsync(orderController.g
 router.post("/verify-ticket", errorAsync(orderController.verifyTicket));
 
 /**
- * @openapi
+ * @swagger
  * /api/v1/member/orders/ticket/view:
  *   get:
  *     summary: 顯示票券資訊頁面

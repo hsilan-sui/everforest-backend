@@ -81,7 +81,7 @@ router.use(restrictTo("admin")); // 限定 admin 存取
 
 router.get("/me", errorAsync(adminController.getAdminData));
 
-//查詢活動列表(支援 EVENT_INFO active狀態) all | draft | pending | published | archived
+//查詢活動列表(支援 EVENT_INFO active狀態) all | draft | pending | published | archived | unpublish_pending
 // 取得所有主辦方辦的活動
 //取得待審核的所有活動(可以排序 先 後)
 /**
@@ -94,6 +94,7 @@ router.get("/me", errorAsync(adminController.getAdminData));
  *     description: |
  *       管理員後台查詢活動清單，支援依據活動狀態、分頁、排序方式查詢。<br>
  *       若指定 `active=rejected` 則查詢退件活動（實際為 active=draft 且 is_rejected=true）。<br>
+ *       若指定 `active=unpublish_pending` 則查詢主辦方送出的下架申請（尚未審核）。<br>
  *       回傳每筆活動資料包含封面圖、方案最高價、圖片數量、開始/結束時間、狀態標籤。
  *     parameters:
  *       - in: query
@@ -102,7 +103,7 @@ router.get("/me", errorAsync(adminController.getAdminData));
  *         required: false
  *         schema:
  *           type: string
- *           enum: [all, draft, rejected, pending, published, archived]
+ *           enum: [all, draft, rejected, pending, published, archived, unpublish_pending]
  *           default: all
  *       - in: query
  *         name: page
@@ -439,6 +440,94 @@ router.patch("/events/:id/reject", errorAsync(adminController.rejectEvent));
  */
 
 router.post("/events/:id/ai-check", errorAsync(adminController.aiReviewEvent));
+
+/**
+ * PATCH /api/admin/events/:eventId/unpublish-review
+ * @desc 管理員審核下架申請 （下架 或 拒絕）
+ */
+/**
+ * @swagger
+ * /admin/events/{eventId}/unpublish/review:
+ *   patch:
+ *     tags:
+ *       - Admin - 活動審核
+ *     summary: 審核活動下架申請
+ *     description: >
+ *       管理員針對主辦方提出的活動下架申請進行審核。若審核通過，將根據是否已有報名者決定活動是否進入退款或直接封存。<br>
+ *       若審核不通過，活動將恢復上架狀態，並寄信通知主辦方與報名者。
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         description: 活動 ID
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               isApprove:
+ *                 type: boolean
+ *                 description: 是否同意下架申請
+ *                 example: true
+ *               comment:
+ *                 type: string
+ *                 description: 管理員審核備註（可選）
+ *                 example: "理由合理，已同意下架"
+ *     responses:
+ *       200:
+ *         description: 審核結果回應
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 下架審核通過，活動進入退款處理
+ *       400:
+ *         description: 活動狀態錯誤或條件不符
+ *       404:
+ *         description: 找不到活動
+ */
+
+router.patch("/events/:eventId/unpublish-review", errorAsync(adminController.reviewUnpublish));
+
+/**
+ * @swagger
+ * /api/admin/events/auto-update-status:
+ *   patch:
+ *     tags:
+ *       - Admin - 活動管理
+ *     summary: 自動更新活動狀態（批次更新）
+ *     description: |
+ *       根據目前時間與活動的報名起訖時間、活動起訖時間，自動判斷每場活動的狀態，並進行批次更新。<br>
+ *       僅針對 `active = published` 且 `status` 屬於特定範圍的活動進行判斷與更新。
+ *     responses:
+ *       200:
+ *         description: 更新完成，回傳成功數量
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: 已更新 5 筆活動狀態
+ *       500:
+ *         description: 更新過程中發生錯誤
+ */
+
+router.patch("/events/auto-update-status", errorAsync(adminController.updateEventStatus));
 
 //封存已結束或不公開的活動
 module.exports = router;
