@@ -995,10 +995,11 @@ const orderController = {
                     e.preventDefault();
                     const ticketCode = e.target.ticket_code.value;
 
-                    const res = await fetch("/api/v1/member/orders/verify-ticket", {
+                    const res = await fetch("https://everforest-backend.zeabur.app/api/v1/member/orders/verify-ticket", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ ticket_code: ticketCode })
+                      body: JSON.stringify({ ticket_code: ticketCode }),
+                      credentials: "include", // ✅ 若使用 cookie/token 認證，這一定要加
                     });
 
                     const result = await res.json();
