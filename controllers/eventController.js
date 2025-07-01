@@ -833,7 +833,15 @@ const eventController = {
 
       // 開始處理每一筆傳入的 plans
       for (const planData of plans) {
-        const { id, title, price, discounted_price, contents = [], addons = [] } = planData;
+        const {
+          id,
+          title,
+          price,
+          discounted_price,
+          people_capacity,
+          contents = [],
+          addons = [],
+        } = planData;
         let plan;
 
         if (id) {
@@ -847,6 +855,7 @@ const eventController = {
           plan.title = title;
           plan.price = price;
           plan.discounted_price = discounted_price;
+          plan.people_capacity = people_capacity;
           await planRepo.save(plan);
 
           // 清空舊的 contents 和 addons
@@ -859,6 +868,7 @@ const eventController = {
             title,
             price,
             discounted_price,
+            people_capacity,
           });
           plan = await planRepo.save(plan); // 儲存後取得新 ID
         }
