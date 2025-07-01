@@ -36,6 +36,7 @@ const allowedOrigins = [
   "https://camping-project-one.vercel.app", // 前端
   "https://campingproject.retool.com", // Retool 網域
   "http://localhost:3000", // 本地測試用
+  "https://everforest-backend.zeabur.app", // 後端打給後端做票券核銷用"
 ];
 const corsOptions = {
   origin: function (origin, callback) {
