@@ -982,7 +982,7 @@ const orderController = {
               ticket.status === "有效"
                 ? `<form id="verify-form">
                     <input type="hidden" name="ticket_code" value="${ticket.ticket_code}">
-                    <button type="submit" class="btn">✅ 核銷票券</button>
+                    <button type="submit" class="btn">✅ 使用票券</button>
                   </form>`
                 : ""
             }
