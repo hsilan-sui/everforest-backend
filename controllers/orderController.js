@@ -346,6 +346,7 @@ const orderController = {
             id: order.eventPlanBox?.id || null,
             title: order.eventPlanBox?.title || null,
             price: order.eventPlanBox?.price || null,
+            discounted_price: order.eventPlanBox?.discounted_price || null,
           },
           quantity: order.quantity,
           total_price: order.total_price,
@@ -390,6 +391,7 @@ const orderController = {
       // 強制轉型為數字
       const parsedQuantity = Number(quantity);
       const parsedPlanPrice = Number(eventPlan.price);
+      const parsedDiscountedPrice = Number(eventPlan.discounted_price) || 0;
 
       if (isNotValidInteger(parsedQuantity) || isNotValidInteger(parsedPlanPrice)) {
         logger.warn("訂單建立失敗：quantity 或 price 格式錯誤", {
@@ -427,7 +429,8 @@ const orderController = {
       }
 
       // 計算總金額
-      const totalPrice = parsedPlanPrice * parsedQuantity + addonsTotal;
+      const unitPrice = parsedDiscountedPrice > 0 ? parsedDiscountedPrice : parsedPlanPrice;
+      const totalPrice = unitPrice * parsedQuantity + addonsTotal;
       logger.debug("總金額計算", {
         parsedPlanPrice,
         parsedQuantity,
@@ -455,6 +458,7 @@ const orderController = {
             event_plan_id: newOrder.event_plan_id,
             event_title: eventPlan.title,
             event_plan_price: parsedPlanPrice,
+            event_plan_discounted_price: parsedDiscountedPrice,
             quantity: parsedQuantity,
             total_price: newOrder.total_price,
             book_at: newOrder.book_at,
@@ -508,6 +512,7 @@ const orderController = {
 
       const parsedQuantity = Number(quantity);
       const parsedPlanPrice = Number(eventPlan.price);
+      const parsedDiscountedPrice = Number(eventPlan.discounted_price) || 0;
 
       if (isNotValidInteger(parsedQuantity) || isNotValidInteger(parsedPlanPrice)) {
         return next(appError(400, "金額不是整數或者大於0"));
@@ -537,9 +542,12 @@ const orderController = {
         addonsTotal += existAddon.price;
       }
 
+      const unitPrice = parsedDiscountedPrice > 0 ? parsedDiscountedPrice : parsedPlanPrice;
+      const totalPrice = unitPrice * parsedQuantity + addonsTotal;
+
       patchorder.event_plan_id = event_plan_id;
       patchorder.event_addons = verifiedAddons;
-      patchorder.total_price = eventPlan.price * parsedQuantity + addonsTotal;
+      patchorder.total_price = totalPrice;
       patchorder.updated_at = new Date();
       patchorder.quantity = parsedQuantity;
       await orderRepo.save(patchorder);
