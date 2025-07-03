@@ -40,7 +40,6 @@ const allowedOrigins = [
 ];
 const corsOptions = {
   origin: function (origin, callback) {
-    console.warn("請求的 Origin 是：", origin);
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
