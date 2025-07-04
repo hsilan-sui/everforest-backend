@@ -72,9 +72,50 @@ const authController = {
     if (!result || !result.id) {
       return next(appError(500, "註冊失敗，請稍後再試"));
     }
+
+    // ====== ⬇註冊後自動登入邏輯 ======
+    //// 生成 Access Token（短效）+ Refresh Token（長效）
+    // ====== ⬇️ 註冊後自動登入邏輯 ======
+    const payload = {
+      id: result.id,
+      username: result.username,
+      email: result.email,
+      role: "member", // 預設角色
+    };
+
+    // 產生 JWT
+    const accessToken = generateAccessJWT(payload);
+    const refreshToken = generateRefreshJWT(payload);
+
+    // 設定 Cookie
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "development", // 本地開發用 false
+      sameSite: "None",
+      maxAge: 1000 * 60 * 15, // 15 分鐘
+      path: "/",
+    });
+    res.cookie("refresh_token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "development",
+      sameSite: "None",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
+      path: "/",
+    });
+
     res.status(201).json({
       status: "success",
       message: "註冊成功",
+      data: {
+        member: {
+          id: result.id,
+          username: result.username,
+          firstname: result.firstname,
+          lastname: result.lastname,
+          email: result.email,
+          role: "member",
+        },
+      },
     });
   },
   async postMemberLogin(req, res, next) {
