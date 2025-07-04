@@ -20,6 +20,7 @@ const passport = require("./config/passport");
 // if (process.env.NODE_ENV !== "production") {
 //   require("dotenv").config(); // 只有在非 production 才會從 .env 檔載入
 // }
+require("./cron/updateEventStatus");
 
 if (process.env.NODE_ENV !== "production") {
   dotenv.config({
