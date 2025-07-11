@@ -13,7 +13,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-////  給 GPT 分析圖片內容是否有風險
+//  給 GPT 分析圖片內容是否有風險
 const summarizeSightengineResults = async (imageResults) => {
   const tools = [
     {

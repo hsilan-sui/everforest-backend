@@ -17,27 +17,25 @@ const {
 
 const processEventCheck = async (eventData) => {
   try {
-    //1.資料清洗: 提取活動中的所有文字內容
+    // 1. 資料清洗: 提取活動中的所有文字內容
     const eventFullText = extractTextFromEvent(eventData);
 
-    //2. 敏感詞檢查（function calling）
-    const sensitiveCheck = await detectEventSensitiveContent(eventFullText);
-
-    //3. 法規檢查（function calling）
-    const regulatoryCheck = await checkCampingRegulations(eventFullText, eventData);
-
-    //4. 圖片描述文字審查
-    //4.1 資料清洗=>提取圖片描述文字
+    // 4.1 資料清洗: 提取圖片描述文字
     const imageDescriptions =
       eventData.eventPhotoBox
         ?.map((p, i) =>
           p.description ? `${p.type || "圖片"} ${i + 1}：「${p.description}」` : null
         )
         .filter(Boolean) || [];
-    //4.2 圖片文字審查
-    const imageCheck = await checkImageDescriptions(imageDescriptions);
 
-    //5. 圖片內容掃描（Sightengine + GPT）
+    // 2, 3, 4.2 同時跑
+    const [sensitiveCheck, regulatoryCheck, imageCheck] = await Promise.all([
+      detectEventSensitiveContent(eventFullText),
+      checkCampingRegulations(eventFullText, eventData),
+      checkImageDescriptions(imageDescriptions),
+    ]);
+
+    // 5. 圖片內容掃描（每張同時跑）
     const simplifiedImageResults = await Promise.all(
       (eventData.eventPhotoBox || []).map(async (p) => {
         try {
@@ -57,10 +55,10 @@ const processEventCheck = async (eventData) => {
       })
     );
 
-    //再把每張結果整理給 GPT 統整
+    // 5.2 再把圖片掃描結果交給 GPT 統整
     const imageRiskSummary = await summarizeSightengineResults(simplifiedImageResults);
 
-    //6. 總結所有審查結果
+    // 6. 總結所有審查結果
     const results = {
       eventData,
       eventFullText,
@@ -70,19 +68,19 @@ const processEventCheck = async (eventData) => {
       imageRiskSummary,
     };
 
-    //7. 交給 GPT 整體回饋（summary）
+    // 7. 交給 GPT 整體回饋（summary）
     const feedback = await generateActivityReviewFeedback(results);
 
-    //8. 判斷是否通過審查
+    // 8. 判斷是否通過審查
     const success =
       (sensitiveCheck.pass ?? true) &&
       (regulatoryCheck.pass ?? true) &&
       (imageCheck.pass ?? true) &&
       !imageRiskSummary.hasRisk;
 
-    console.warn(`要檢查的活動===> ${results}`); // 看得更完整
+    console.warn(`要檢查的活動===>`, results);
 
-    //9. 回傳
+    // 9. 回傳
     return {
       success,
       ...results,
@@ -93,5 +91,84 @@ const processEventCheck = async (eventData) => {
     throw error;
   }
 };
+
+// const processEventCheck = async (eventData) => {
+//   try {
+//     //1.資料清洗: 提取活動中的所有文字內容
+//     const eventFullText = extractTextFromEvent(eventData);
+
+//     //2. 敏感詞檢查（function calling）
+//     const sensitiveCheck = await detectEventSensitiveContent(eventFullText);
+
+//     //3. 法規檢查（function calling）
+//     const regulatoryCheck = await checkCampingRegulations(eventFullText, eventData);
+
+//     //4. 圖片描述文字審查
+//     //4.1 資料清洗=>提取圖片描述文字
+//     const imageDescriptions =
+//       eventData.eventPhotoBox
+//         ?.map((p, i) =>
+//           p.description ? `${p.type || "圖片"} ${i + 1}：「${p.description}」` : null
+//         )
+//         .filter(Boolean) || [];
+//     //4.2 圖片文字審查
+//     const imageCheck = await checkImageDescriptions(imageDescriptions);
+
+//     //5. 圖片內容掃描（Sightengine + GPT）
+//     const simplifiedImageResults = await Promise.all(
+//       (eventData.eventPhotoBox || []).map(async (p) => {
+//         try {
+//           const raw = await checkImageWithSightengine(p.photo_url);
+//           return {
+//             url: p.photo_url,
+//             type: p.type || "未知",
+//             simplifiedResult: simplifySightengineResult(raw),
+//           };
+//         } catch (e) {
+//           return {
+//             url: p.photo_url,
+//             type: p.type || "未知",
+//             error: e.message,
+//           };
+//         }
+//       })
+//     );
+
+//     //再把每張結果整理給 GPT 統整
+//     const imageRiskSummary = await summarizeSightengineResults(simplifiedImageResults);
+
+//     //6. 總結所有審查結果
+//     const results = {
+//       eventData,
+//       eventFullText,
+//       sensitiveCheck,
+//       regulatoryCheck,
+//       imageCheck,
+//       imageRiskSummary,
+//     };
+
+//     //7. 交給 GPT 整體回饋（summary）
+//     const feedback = await generateActivityReviewFeedback(results);
+
+//     //8. 判斷是否通過審查
+//     const success =
+//       (sensitiveCheck.pass ?? true) &&
+//       (regulatoryCheck.pass ?? true) &&
+//       (imageCheck.pass ?? true) &&
+//       !imageRiskSummary.hasRisk;
+
+//     console.warn(`要檢查的活動===> ${results}`); // 看得更完整
+
+//     //9. 回傳
+//     return {
+//       success,
+//       ...results,
+//       feedback,
+//     };
+//   } catch (error) {
+//     console.error("AI 活動審查失敗：", error);
+//     throw error;
+//   }
+// };
 
 module.exports = { processEventCheck };
