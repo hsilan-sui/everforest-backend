@@ -4,15 +4,19 @@
  * @param {boolean} isApproved - 是否通過
  * @returns {string} HTML 字串
  */
+
 const MarkdownIt = require("markdown-it");
 const md = new MarkdownIt();
+
 
 const formatReviewResultHTML = (result, isApproved) => {
   const { sensitiveCheck, regulatoryCheck, imageCheck, imageRiskSummary, feedback } = result;
 
   const passMark = (pass) => (pass ? "✅ 通過" : "❌ 未通過");
 
+
   const feedbackHTML = md.render(feedback); // 將 Markdown 轉成 HTML
+
 
   return `
       <h3 style="color: ${isApproved ? "#28a745" : "#e74c3c"};">
