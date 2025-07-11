@@ -4,11 +4,14 @@
  * @param {boolean} isApproved - 是否通過
  * @returns {string} HTML 字串
  */
+const marked = require("marked");
 
 const formatReviewResultHTML = (result, isApproved) => {
   const { sensitiveCheck, regulatoryCheck, imageCheck, imageRiskSummary, feedback } = result;
 
   const passMark = (pass) => (pass ? "✅ 通過" : "❌ 未通過");
+
+  const feedbackHTML = marked.parse(feedback); // 將 Markdown 轉 HTML
 
   return `
       <h3 style="color: ${isApproved ? "#28a745" : "#e74c3c"};">
@@ -21,9 +24,9 @@ const formatReviewResultHTML = (result, isApproved) => {
         <li>圖片風險分析：${imageRiskSummary?.hasRisk ? "❌ 發現風險" : "✅ 無風險"}</li>
       </ul>
   
-      <h3 style="margin-top: 20px;">🤖 GPT 活動文案回饋建議</h3>
+      <h3 style="margin-top: 20px;">🤖 AI總結活動文案回饋建議：</h3>
       <div style="background: #fefefe; border: 1px dashed #ccc; padding: 16px; text-align: left; border-radius: 8px; color: #555;">
-        ${feedback.replace(/\n/g, "<br>")}
+        ${feedbackHTML}
       </div>
     `.trim();
 };
