@@ -405,7 +405,7 @@ const authController = {
         role: finalMember.role,
         email,
         googleId,
-        username: member.username,
+        username: finalMember.username,
         name,
         picture,
       };
